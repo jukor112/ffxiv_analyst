@@ -1,10 +1,10 @@
 import { gil } from "../utils/format";
 
 const SOURCE_BADGE = {
-    craft: { label: "Craft", style: { background: "rgba(80,120,200,0.18)", color: "#6aa0e8" } },
-    gather: { label: "Gather", style: { background: "rgba(60,180,100,0.18)", color: "#4cba82" } },
-    buy: { label: "Buy", style: { background: "rgba(140,140,140,0.15)", color: "#888" } },
-    npc: { label: "NPC", style: { background: "rgba(220,160,40,0.18)", color: "#d4a435" } },
+    craft: { label: "Craft", title: "Can be crafted — price shown is from the marketboard", style: { background: "rgba(80,120,200,0.18)", color: "#6aa0e8" } },
+    gather: { label: "Gather", title: "Can be gathered — price shown is from the marketboard", style: { background: "rgba(60,180,100,0.18)", color: "#4cba82" } },
+    buy: { label: "Market", title: "Price from the marketboard", style: { background: "rgba(140,140,140,0.15)", color: "#888" } },
+    npc: { label: "NPC", title: "Fixed price from an NPC shop", style: { background: "rgba(220,160,40,0.18)", color: "#d4a435" } },
 };
 
 export default function IngredientPanel({ ingredients, excluded, onToggle, onReset }) {
@@ -14,12 +14,18 @@ export default function IngredientPanel({ ingredients, excluded, onToggle, onRes
 
     return (
         <div className="px-4 py-3 pl-9">
-            <div className="flex items-center gap-3 mb-2.5">
+            <div className="flex items-center gap-3 mb-1">
                 <p className="text-[10px] uppercase tracking-[1px] text-primary font-bold">Ingredients</p>
                 <p className="text-[10px] text-muted-foreground">
                     click an ingredient to exclude its cost (you craft/gather it yourself)
                 </p>
             </div>
+            <p className="text-[10px] text-muted-foreground mb-2.5">
+                Prices shown are marketboard prices unless noted otherwise ·{" "}
+                <span className="font-semibold" style={{ color: "#d4a435" }}>NPC</span> = fixed NPC shop price ·{" "}
+                <span className="font-semibold" style={{ color: "#6aa0e8" }}>Craft</span> /{" "}
+                <span className="font-semibold" style={{ color: "#4cba82" }}>Gather</span> = crafted/gathered but priced via marketboard
+            </p>
             <div className="flex flex-wrap gap-2">
                 {ingredients.map((ing, i) => {
                     const badge = SOURCE_BADGE[ing.source] ?? SOURCE_BADGE.buy;
@@ -42,6 +48,7 @@ export default function IngredientPanel({ ingredients, excluded, onToggle, onRes
                                 <span
                                     className="inline-block px-1.5 py-px rounded text-[9px] font-bold uppercase tracking-wide leading-tight"
                                     style={badge.style}
+                                    title={badge.title}
                                 >
                                     {badge.label}
                                 </span>
