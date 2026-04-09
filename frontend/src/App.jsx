@@ -200,7 +200,7 @@ export default function App() {
                             onSort={handleSort}
                             onToggle={handleToggle}
                         />
-                    ) : (
+                    ) : !loading && (
                         <EmptyState hasRun={hasRun} />
                     )}
                 </div>
