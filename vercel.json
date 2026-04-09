@@ -1,8 +1,21 @@
 {
-  "buildCommand": "cd frontend && npm install && npm run build",
-  "outputDirectory": "static",
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.py" },
-    { "source": "/(.*)", "destination": "/$1" }
-  ]
+    "buildCommand": "cd frontend && npm install && npm run build",
+    "outputDirectory": "static",
+    "functions": {
+        "api/index.py": { "maxDuration": 60 }
+    },
+    "headers": [
+        {
+            "source": "/assets/(.*)",
+            "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+        },
+        {
+            "source": "/(.*\\.html|/|)",
+            "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
+        }
+    ],
+    "rewrites": [
+        { "source": "/api/(.*)", "destination": "/api/index.py" },
+        { "source": "/(.*)", "destination": "/$1" }
+    ]
 }

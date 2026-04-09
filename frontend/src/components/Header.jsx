@@ -21,7 +21,10 @@ export default function Header() {
                 </p>
             </div>
 
-            <div className="ml-auto hidden sm:flex items-center gap-1.5 text-[10px] text-muted-foreground/60 uppercase tracking-widest">
+            <div className="ml-auto hidden sm:flex items-center gap-3 text-[10px] text-muted-foreground/60 uppercase tracking-widest">
+                <span className="border border-primary/30 rounded px-1.5 py-0.5 text-primary/50 font-mono">
+                    v{__APP_VERSION__}
+                </span>
                 <span className="w-1 h-1 rounded-full bg-primary/40" />
                 universalis
                 <span className="w-1 h-1 rounded-full bg-primary/40" />

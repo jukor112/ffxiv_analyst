@@ -60,7 +60,16 @@ export function analyzeStream(params, onProgress) {
         es.onerror = () => {
             done(() => {
                 es.close();
-                reject(new Error("Stream connection error"));
+                // SSE not supported (mobile proxies, Vercel buffering, etc.) — fall back to
+                // the regular JSON endpoint which works everywhere.
+                onProgress(5, "Streaming unavailable, using fallback…");
+                fetch(`/api/analyze?${params}`)
+                    .then((r) => {
+                        if (!r.ok) return r.text().then((t) => Promise.reject(new Error(`HTTP ${r.status}: ${t}`)));
+                        return r.json();
+                    })
+                    .then((data) => resolve(data))
+                    .catch((err) => reject(err));
             });
         };
     });
