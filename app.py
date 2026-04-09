@@ -153,7 +153,8 @@ async def analyze_endpoint(
 
 STATIC_DIR = Path(__file__).parent / "static"
 STATIC_DIR.mkdir(exist_ok=True)
-app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")
+if STATIC_DIR.exists() and any(STATIC_DIR.iterdir()):
+    app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")
 
 # ---------------------------------------------------------------------------
 # Entry point
