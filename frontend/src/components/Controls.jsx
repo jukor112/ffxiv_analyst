@@ -184,7 +184,7 @@ export default function Controls({ worlds, cacheInfo, onAnalyze, loading }) {
     const [job, setJob] = useState("ALL");
     const [sortBy, setSortBy] = useState("profit");
     const [minProfit, setMinProfit] = useState(0);
-    const [minVelocity, setMinVelocity] = useState(0);
+    const [minVelocity, setMinVelocity] = useState(1);
     const [limit, setLimit] = useState(50);
     const [minLevel, setMinLevel] = useState(0);
     const [maxLevel, setMaxLevel] = useState(0);
@@ -332,11 +332,11 @@ export default function Controls({ worlds, cacheInfo, onAnalyze, loading }) {
                             <SuffixInput
                                 type="number"
                                 value={minVelocity}
-                                min="0"
+                                min="1"
                                 step="0.1"
-                                placeholder="0"
+                                placeholder="1"
                                 suffix="Sales/day"
-                                onChange={(e) => setMinVelocity(parseFloat(e.target.value) || 0)}
+                                onChange={(e) => setMinVelocity(Math.max(1, parseFloat(e.target.value) || 1))}
                             />
                         </FieldGroup>
 
