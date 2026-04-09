@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        /* FFXIV shadcn/ui theme tokens (HSL) */
+        --background: 240 57% 6%;
+        --foreground: 37 30% 87%;
+        --card: 240 33% 15%;
+        --card-foreground: 37 30% 87%;
+        --popover: 240 33% 15%;
+        --popover-foreground: 37 30% 87%;
+        --primary: 42 55% 54%;
+        --primary-foreground: 240 57% 6%;
+        --secondary: 240 30% 21%;
+        --secondary-foreground: 37 30% 87%;
+        --muted: 240 45% 11%;
+        --muted-foreground: 240 14% 55%;
+        --accent: 240 33% 15%;
+        --accent-foreground: 37 30% 87%;
+        --destructive: 0 72% 60%;
+        --destructive-foreground: 0 0% 100%;
+        --border: 240 30% 21%;
+        --input: 240 33% 15%;
+        --ring: 42 55% 54%;
+        --radius: 0.5rem;
+    }
+
+    *,
+    *::before,
+    *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    html {
+        scroll-behavior: smooth;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+        font-family: "Segoe UI", system-ui, sans-serif;
+        min-height: 100vh;
+    }
+
+    /* Native select option colors */
+    select option {
+        background: #191932;
+        color: #e8e3d5;
+    }
+}
