@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { Analytics } from "@vercel/analytics/react";
+import { Analytics } from "@vercel/analytics/react";
 import { apiFetch } from "./utils/api";
 import { STRING_COLS } from "./utils/format";
 import Header from "./components/Header";
@@ -207,6 +209,22 @@ export default function App() {
                     )}
                 </div>
             </div>
+
+            <footer className="border-t border-border/40 mt-2 pb-6 px-5">
+                <p className="text-center text-[10px] text-muted-foreground/40 leading-relaxed max-w-2xl mx-auto">
+                    FINAL FANTASY XIV © SQUARE ENIX CO., LTD. All Rights Reserved. Market data provided by{" "}
+                    <a
+                        href="https://universalis.app"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline underline-offset-2 hover:text-muted-foreground/70 transition-colors"
+                    >
+                        Universalis
+                    </a>
+                    . This tool is not affiliated with, endorsed by, or sponsored by Square Enix.
+                </p>
+            </footer>
+            <Analytics />
         </>
     );
 }
