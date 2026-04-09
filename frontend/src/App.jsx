@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Analytics } from "@vercel/analytics/react";
-import { SpeedInsights } from "@vercel/speed-insights/next";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import { apiFetch, analyzeStream } from "./utils/api";
 import { STRING_COLS } from "./utils/format";
 import Header from "./components/Header";
