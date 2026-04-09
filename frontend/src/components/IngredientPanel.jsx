@@ -1,10 +1,26 @@
 import { gil } from "../utils/format";
 
 const SOURCE_BADGE = {
-    craft: { label: "Craft", title: "Can be crafted — price shown is from the marketboard", style: { background: "rgba(80,120,200,0.18)", color: "#6aa0e8" } },
-    gather: { label: "Gather", title: "Can be gathered — price shown is from the marketboard", style: { background: "rgba(60,180,100,0.18)", color: "#4cba82" } },
-    buy: { label: "Market", title: "Price from the marketboard", style: { background: "rgba(140,140,140,0.15)", color: "#888" } },
-    npc: { label: "NPC", title: "Fixed price from an NPC shop", style: { background: "rgba(220,160,40,0.18)", color: "#d4a435" } },
+    craft: {
+        label: "Craft",
+        title: "Can be crafted — price shown is from the marketboard",
+        style: { background: "rgba(80,120,200,0.18)", color: "#6aa0e8" },
+    },
+    gather: {
+        label: "Gather",
+        title: "Can be gathered — price shown is from the marketboard",
+        style: { background: "rgba(60,180,100,0.18)", color: "#4cba82" },
+    },
+    buy: {
+        label: "Market",
+        title: "Price from the marketboard",
+        style: { background: "rgba(140,140,140,0.15)", color: "#888" },
+    },
+    npc: {
+        label: "NPC",
+        title: "Fixed price from an NPC shop",
+        style: { background: "rgba(220,160,40,0.18)", color: "#d4a435" },
+    },
 };
 
 export default function IngredientPanel({ ingredients, excluded, onToggle, onReset }) {
@@ -22,9 +38,18 @@ export default function IngredientPanel({ ingredients, excluded, onToggle, onRes
             </div>
             <p className="text-[10px] text-muted-foreground mb-2.5">
                 Prices shown are marketboard prices unless noted otherwise ·{" "}
-                <span className="font-semibold" style={{ color: "#d4a435" }}>NPC</span> = fixed NPC shop price ·{" "}
-                <span className="font-semibold" style={{ color: "#6aa0e8" }}>Craft</span> /{" "}
-                <span className="font-semibold" style={{ color: "#4cba82" }}>Gather</span> = crafted/gathered but priced via marketboard
+                <span className="font-semibold" style={{ color: "#d4a435" }}>
+                    NPC
+                </span>{" "}
+                = fixed NPC shop price ·{" "}
+                <span className="font-semibold" style={{ color: "#6aa0e8" }}>
+                    Craft
+                </span>{" "}
+                /{" "}
+                <span className="font-semibold" style={{ color: "#4cba82" }}>
+                    Gather
+                </span>{" "}
+                = crafted/gathered but priced via marketboard
             </p>
             <div className="flex flex-wrap gap-2">
                 {ingredients.map((ing, i) => {
