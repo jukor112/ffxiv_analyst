@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Analytics } from "@vercel/analytics/react";
-import { Analytics } from "@vercel/analytics/react";
 import { apiFetch } from "./utils/api";
 import { STRING_COLS } from "./utils/format";
 import Header from "./components/Header";
