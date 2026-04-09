@@ -11,9 +11,7 @@ export default function ProgressBar({ loading, progress = 0, message = "" }) {
                     }}
                 />
             </div>
-            {message && (
-                <p className="text-[10px] text-muted-foreground mt-1">{message}</p>
-            )}
+            {message && <p className="text-[10px] text-muted-foreground mt-1">{message}</p>}
         </div>
     );
 }

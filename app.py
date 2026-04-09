@@ -201,7 +201,11 @@ async def analyze_stream_endpoint(
 
     async def event_stream():
         while True:
-            event = await queue.get()
+            try:
+                event = await asyncio.wait_for(queue.get(), timeout=180.0)
+            except asyncio.TimeoutError:
+                yield f"data: {json.dumps({'type': 'error', 'msg': 'Analysis timed out — Universalis may be slow, try again'})}\n\n"
+                break
             yield f"data: {json.dumps(event)}\n\n"
             if event["type"] in ("done", "error"):
                 break

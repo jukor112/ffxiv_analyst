@@ -17,7 +17,25 @@ export function analyzeStream(params, onProgress) {
         const url = `/api/analyze/stream?${params}`;
         const es = new EventSource(url);
 
+        // Kill the stream if no message arrives within 200 s (server timeout is 180 s)
+        let watchdog = setTimeout(() => {
+            es.close();
+            reject(new Error("Analysis timed out — Universalis may be slow, try again"));
+        }, 200_000);
+
+        const done = (fn) => {
+            clearTimeout(watchdog);
+            fn();
+        };
+
         es.onmessage = (e) => {
+            // Reset watchdog on every message so progress keeps it alive
+            clearTimeout(watchdog);
+            watchdog = setTimeout(() => {
+                es.close();
+                reject(new Error("Analysis timed out — Universalis may be slow, try again"));
+            }, 200_000);
+
             let event;
             try {
                 event = JSON.parse(e.data);
@@ -27,17 +45,23 @@ export function analyzeStream(params, onProgress) {
             if (event.type === "progress") {
                 onProgress(event.pct, event.msg);
             } else if (event.type === "done") {
-                es.close();
-                resolve(event.data);
+                done(() => {
+                    es.close();
+                    resolve(event.data);
+                });
             } else if (event.type === "error") {
-                es.close();
-                reject(new Error(event.msg));
+                done(() => {
+                    es.close();
+                    reject(new Error(event.msg));
+                });
             }
         };
 
         es.onerror = () => {
-            es.close();
-            reject(new Error("Stream connection error"));
+            done(() => {
+                es.close();
+                reject(new Error("Stream connection error"));
+            });
         };
     });
 }

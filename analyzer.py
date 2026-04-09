@@ -337,7 +337,7 @@ async def _fetch_market_chunk(
         resp = await client.get(
             f"{UNIVERSALIS_BASE}/{world}/{ids_str}",
             params=req_params,
-            timeout=30,
+            timeout=15,
         )
         if resp.status_code in (429, 503):
             await asyncio.sleep(2 ** attempt)  # 1s, 2s, 4s
@@ -349,7 +349,7 @@ async def _fetch_market_chunk(
         return {str(item_ids[0]): data} if data else {}
     assert resp is not None
     raise httpx.HTTPStatusError(
-        f"Rate limited after retries", request=resp.request, response=resp
+        "Rate limited after retries", request=resp.request, response=resp
     )
 
 
