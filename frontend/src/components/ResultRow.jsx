@@ -52,7 +52,7 @@ export default function ResultRow({ r, idx, expanded, onToggle }) {
             : 0;
     const adjCost = r.cost - savedCost;
     const adjProfit = r.sell_price - adjCost;
-    const adjMargin = adjCost > 0 ? Math.round((adjProfit / adjCost) * 1000) / 10 : r.margin;
+    const adjMargin = r.sell_price > 0 ? Math.round((adjProfit / r.sell_price) * 1000) / 10 : r.margin;
 
     const displayCost = excluded.size > 0 ? adjCost : r.cost;
     const displayProfit = excluded.size > 0 ? adjProfit : r.profit;
@@ -131,44 +131,45 @@ export default function ResultRow({ r, idx, expanded, onToggle }) {
                                 <span>{jobs.length}×</span>
                             </span>
                             {/* Tooltip rendered in a portal to escape table stacking context */}
-                            {tipPos && createPortal(
-                                <div
-                                    className="pointer-events-none fixed z-[9999] -translate-x-1/2 bg-[#0d0d22] border border-border rounded shadow-lg px-2 py-1.5 flex flex-col gap-1 whitespace-nowrap"
-                                    style={{
-                                        left: tipPos.x,
-                                        ...(tipPos.below
-                                            ? { top: tipPos.y + 6 }
-                                            : { bottom: window.innerHeight - tipPos.y + 6 }),
-                                    }}
-                                >
-                                    <span className="text-[9px] uppercase tracking-widest text-muted-foreground mb-0.5">
-                                        Craftable by
-                                    </span>
-                                    {jobs.map((job, i) => {
-                                        const jStyle = JOB_STYLES[job] ?? {
-                                            background: "rgba(30,30,30,0.9)",
-                                            color: "#888",
-                                        };
-                                        return (
-                                            <span
-                                                key={job}
-                                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-extrabold tracking-wide"
-                                                style={jStyle}
-                                            >
-                                                {jobIcons[i] && (
-                                                    <img
-                                                        src={jobIcons[i]}
-                                                        alt={job}
-                                                        className="w-3.5 h-3.5 object-contain"
-                                                    />
-                                                )}
-                                                {job}
-                                            </span>
-                                        );
-                                    })}
-                                </div>,
-                                document.body,
-                            )}
+                            {tipPos &&
+                                createPortal(
+                                    <div
+                                        className="pointer-events-none fixed z-[9999] -translate-x-1/2 bg-[#0d0d22] border border-border rounded shadow-lg px-2 py-1.5 flex flex-col gap-1 whitespace-nowrap"
+                                        style={{
+                                            left: tipPos.x,
+                                            ...(tipPos.below
+                                                ? { top: tipPos.y + 6 }
+                                                : { bottom: window.innerHeight - tipPos.y + 6 }),
+                                        }}
+                                    >
+                                        <span className="text-[9px] uppercase tracking-widest text-muted-foreground mb-0.5">
+                                            Craftable by
+                                        </span>
+                                        {jobs.map((job, i) => {
+                                            const jStyle = JOB_STYLES[job] ?? {
+                                                background: "rgba(30,30,30,0.9)",
+                                                color: "#888",
+                                            };
+                                            return (
+                                                <span
+                                                    key={job}
+                                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-extrabold tracking-wide"
+                                                    style={jStyle}
+                                                >
+                                                    {jobIcons[i] && (
+                                                        <img
+                                                            src={jobIcons[i]}
+                                                            alt={job}
+                                                            className="w-3.5 h-3.5 object-contain"
+                                                        />
+                                                    )}
+                                                    {job}
+                                                </span>
+                                            );
+                                        })}
+                                    </div>,
+                                    document.body,
+                                )}
                         </span>
                     )}
                 </td>

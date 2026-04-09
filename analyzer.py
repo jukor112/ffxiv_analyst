@@ -629,7 +629,7 @@ async def analyze(
 
         revenue = avg_unit_price * recipe["amount_result"]
         profit = revenue - total_cost
-        margin = (profit / total_cost * 100) if total_cost > 0 else 0
+        margin = (profit / revenue * 100) if revenue > 0 else 0
 
         if velocity < min_velocity:
             stats_velocity_filtered += 1
