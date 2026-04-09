@@ -207,7 +207,7 @@ export default function App() {
             </div>
 
             <footer className="border-t border-border/40 mt-2 pb-6 px-5">
-                <p className="text-center text-[10px] text-muted-foreground/40 leading-relaxed max-w-2xl mx-auto">
+                <p className="text-center text-[10px] text-muted-foreground/40 leading-relaxed mx-auto">
                     FINAL FANTASY XIV © SQUARE ENIX CO., LTD. All Rights Reserved. Market data provided by{" "}
                     <a
                         href="https://universalis.app"
