@@ -35,12 +35,6 @@ export default function App() {
         }
     }
 
-    async function handleRefreshCache() {
-        await apiFetch("/api/cache", { method: "DELETE" });
-        loadCacheStatus();
-        setStatus({ type: "loading", msg: "Recipe cache cleared. Next analysis will rebuild it." });
-    }
-
     async function handleAnalyze({
         world,
         job,
@@ -158,13 +152,7 @@ export default function App() {
         <>
             <Header />
             <div className="max-w-[1380px] mx-auto px-5 py-5 pb-10">
-                <Controls
-                    worlds={worlds}
-                    cacheInfo={cacheInfo}
-                    onRefreshCache={handleRefreshCache}
-                    onAnalyze={handleAnalyze}
-                    loading={loading}
-                />
+                <Controls worlds={worlds} cacheInfo={cacheInfo} onAnalyze={handleAnalyze} loading={loading} />
 
                 <StatusBar status={status} />
                 <ProgressBar loading={loading} />

@@ -179,7 +179,7 @@ function FieldGroup({ label, children }) {
 
 const LS_KEY = "ffxiv_world";
 
-export default function Controls({ worlds, cacheInfo, onRefreshCache, onAnalyze, loading }) {
+export default function Controls({ worlds, cacheInfo, onAnalyze, loading }) {
     const [world, setWorld] = useState(() => localStorage.getItem(LS_KEY) ?? "Gilgamesh");
     const [job, setJob] = useState("ALL");
     const [sortBy, setSortBy] = useState("profit");
@@ -433,7 +433,7 @@ export default function Controls({ worlds, cacheInfo, onRefreshCache, onAnalyze,
                                 <ScanSearch size={14} className="mr-1.5" />
                                 Analyse Market
                             </Button>
-                            <CacheRow info={cacheInfo} onRefresh={onRefreshCache} />
+                            <CacheRow info={cacheInfo} />
                         </div>
                     </div>
                 </CardContent>

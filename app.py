@@ -10,7 +10,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from analyzer import JOBS, analyze, clear_recipe_cache, get_cache_info
+from analyzer import JOBS, analyze, get_cache_info
 
 # ---------------------------------------------------------------------------
 # App
@@ -101,13 +101,6 @@ async def get_worlds() -> dict:
 async def cache_status() -> dict:
     """Return the current recipe cache status."""
     return get_cache_info()
-
-
-@app.delete("/api/cache")
-async def delete_cache() -> dict:
-    """Clear the recipe cache so it will be rebuilt on the next analysis."""
-    clear_recipe_cache()
-    return {"message": "Recipe cache cleared. It will be rebuilt on next analysis."}
 
 
 @app.get("/api/analyze")
