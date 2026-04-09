@@ -5,6 +5,8 @@ Fetches crafting recipes from XIVAPI and live market prices from Universalis.
 
 import asyncio
 import json
+import os
+import shutil
 import time
 from pathlib import Path
 from typing import Optional
@@ -15,7 +17,25 @@ import httpx
 # Constants
 # ---------------------------------------------------------------------------
 
-CACHE_DIR = Path(__file__).parent / "cache"
+# On Vercel (and other serverless platforms) the repo root is read-only;
+# only /tmp is writable.  We use /tmp/cache at runtime and seed it once
+# from the bundled cache/ folder so cold starts have data immediately.
+_BUNDLE_CACHE_DIR = Path(__file__).parent / "cache"
+CACHE_DIR = Path("/tmp/cache") if os.environ.get("VERCEL") else _BUNDLE_CACHE_DIR
+
+
+def _seed_tmp_cache() -> None:
+    """Copy bundled cache files into /tmp/cache if they are not already there."""
+    if CACHE_DIR == _BUNDLE_CACHE_DIR:
+        return  # running locally — nothing to seed
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    for src in _BUNDLE_CACHE_DIR.glob("*.json"):
+        dst = CACHE_DIR / src.name
+        if not dst.exists():
+            shutil.copy2(src, dst)
+
+
+_seed_tmp_cache()
 RECIPE_CACHE_TTL = 86400  # 24 hours
 RECIPE_CACHE_KEY = "recipes_v5"  # v5 = actually fetch ingredient PriceMid (NPC shop price)
 GATHERING_CACHE_KEY = "gathering_v1"
@@ -92,7 +112,7 @@ UNIVERSALIS_CONCURRENCY = 8
 
 
 def _cache_path(key: str) -> Path:
-    CACHE_DIR.mkdir(exist_ok=True)
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
     return CACHE_DIR / f"{key}.json"
 
 
