@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Analytics } from "@vercel/analytics/react";
-import { apiFetch } from "./utils/api";
+import { apiFetch, analyzeStream } from "./utils/api";
 import { STRING_COLS } from "./utils/format";
 import Header from "./components/Header";
 import Controls from "./components/Controls";
@@ -13,6 +13,8 @@ export default function App() {
     const [worlds, setWorlds] = useState({});
     const [cacheInfo, setCacheInfo] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [progress, setProgress] = useState(0);
+    const [progressMsg, setProgressMsg] = useState("");
     const [status, setStatus] = useState(null);
     const [results, setResults] = useState([]);
     const [meta, setMeta] = useState(null);
@@ -49,6 +51,8 @@ export default function App() {
     }) {
         setLoading(true);
         setHasRun(true);
+        setProgress(0);
+        setProgressMsg("");
         setStatus({ type: "loading", msg: `Fetching data for ${world}…` });
         try {
             const params = new URLSearchParams({
@@ -64,7 +68,10 @@ export default function App() {
                 item_category: itemCategory,
                 stats_within_days: statsWithinDays,
             });
-            const result = await apiFetch(`/api/analyze?${params}`);
+            const result = await analyzeStream(params, (pct, msg) => {
+                setProgress(pct);
+                setProgressMsg(msg);
+            });
             if (result.error) {
                 setStatus({ type: "err", msg: `Error: ${result.error}` });
                 return;
@@ -110,6 +117,8 @@ export default function App() {
             setStatus({ type: "err", msg: `Request failed: ${e.message}` });
         } finally {
             setLoading(false);
+            setProgress(0);
+            setProgressMsg("");
         }
     }
 
@@ -154,7 +163,7 @@ export default function App() {
                 <Controls worlds={worlds} cacheInfo={cacheInfo} onAnalyze={handleAnalyze} loading={loading} />
 
                 <StatusBar status={status} />
-                <ProgressBar loading={loading} />
+                <ProgressBar loading={loading} progress={progress} message={progressMsg} />
 
                 <div className="rounded-lg border border-border bg-card overflow-hidden">
                     {/* Card Header */}

@@ -6,3 +6,38 @@ export async function apiFetch(url, options = {}) {
     }
     return res.json();
 }
+
+/**
+ * Stream analysis results via SSE.
+ * Calls onProgress(pct, msg) for each progress event.
+ * Resolves with the final result object on completion.
+ */
+export function analyzeStream(params, onProgress) {
+    return new Promise((resolve, reject) => {
+        const url = `/api/analyze/stream?${params}`;
+        const es = new EventSource(url);
+
+        es.onmessage = (e) => {
+            let event;
+            try {
+                event = JSON.parse(e.data);
+            } catch {
+                return;
+            }
+            if (event.type === "progress") {
+                onProgress(event.pct, event.msg);
+            } else if (event.type === "done") {
+                es.close();
+                resolve(event.data);
+            } else if (event.type === "error") {
+                es.close();
+                reject(new Error(event.msg));
+            }
+        };
+
+        es.onerror = () => {
+            es.close();
+            reject(new Error("Stream connection error"));
+        };
+    });
+}

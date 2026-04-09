@@ -3,11 +3,13 @@ FFXIV Marketboard Analyst — FastAPI Application
 Run with: python app.py  (or uvicorn app:app --reload)
 """
 
+import asyncio
+import json
 from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from analyzer import JOBS, analyze, get_cache_info
@@ -138,6 +140,77 @@ async def analyze_endpoint(
         return JSONResponse(content=result)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+_ANALYZE_PARAMS = dict(
+    world=Query(..., description="World or Datacenter name, e.g. Gilgamesh or Crystal"),
+    job=Query("ALL", description="Job abbreviation or ALL"),
+    min_profit=Query(0, ge=0),
+    min_velocity=Query(0.0, ge=0.0),
+    limit=Query(50, ge=1, le=200),
+    sort_by=Query("profit"),
+    min_level=Query(0, ge=0),
+    max_level=Query(0, ge=0),
+    item_search=Query(""),
+    item_category=Query(""),
+    stats_within_days=Query(0, ge=0),
+)
+
+
+@app.get("/api/analyze/stream")
+async def analyze_stream_endpoint(
+    world: str = Query(...),
+    job: str = Query("ALL"),
+    min_profit: int = Query(0, ge=0),
+    min_velocity: float = Query(0.0, ge=0.0),
+    limit: int = Query(50, ge=1, le=200),
+    sort_by: str = Query("profit"),
+    min_level: int = Query(0, ge=0),
+    max_level: int = Query(0, ge=0),
+    item_search: str = Query(""),
+    item_category: str = Query(""),
+    stats_within_days: int = Query(0, ge=0),
+):
+    """SSE endpoint that streams analysis progress then the final result."""
+    queue: asyncio.Queue = asyncio.Queue()
+
+    async def run():
+        async def on_progress(pct: int, msg: str) -> None:
+            await queue.put({"type": "progress", "pct": pct, "msg": msg})
+
+        try:
+            result = await analyze(
+                world=world,
+                job_abbr=job,
+                min_profit=min_profit,
+                min_velocity=min_velocity,
+                limit=limit,
+                sort_by=sort_by,
+                min_level=min_level,
+                max_level=max_level,
+                item_search=item_search,
+                item_category=item_category,
+                stats_within_days=stats_within_days,
+                on_progress=on_progress,
+            )
+            await queue.put({"type": "done", "data": result})
+        except Exception as exc:
+            await queue.put({"type": "error", "msg": str(exc)})
+
+    asyncio.create_task(run())
+
+    async def event_stream():
+        while True:
+            event = await queue.get()
+            yield f"data: {json.dumps(event)}\n\n"
+            if event["type"] in ("done", "error"):
+                break
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -353,8 +353,20 @@ async def _fetch_market_chunk(
     )
 
 
-async def fetch_market_data(world: str, item_ids: list[int], stats_within_days: int = 0) -> tuple[dict[int, dict], int]:
-    """Fetch Universalis market data for a list of item IDs."""
+async def fetch_market_data(
+    world: str,
+    item_ids: list[int],
+    stats_within_days: int = 0,
+    on_progress=None,
+    progress_start: int = 30,
+    progress_end: int = 90,
+) -> tuple[dict[int, dict], int]:
+    """Fetch Universalis market data for a list of item IDs.
+
+    If *on_progress* is provided it is called as ``await on_progress(pct, msg)``
+    as each chunk completes, where pct advances linearly from *progress_start*
+    to *progress_end*.
+    """
     if not item_ids:
         return {}, 0
 
@@ -362,14 +374,22 @@ async def fetch_market_data(world: str, item_ids: list[int], stats_within_days: 
         item_ids[i : i + UNIVERSALIS_CHUNK]
         for i in range(0, len(item_ids), UNIVERSALIS_CHUNK)
     ]
+    total_chunks = len(chunks)
     result: dict[int, dict] = {}
     stats_within_ms = stats_within_days * 86400 * 1000 if stats_within_days > 0 else 0
     failed_chunks = 0
+    completed = 0
     semaphore = asyncio.Semaphore(UNIVERSALIS_CONCURRENCY)
 
     async def _fetch_with_sem(client: httpx.AsyncClient, chunk: list[int]) -> dict:
+        nonlocal completed
         async with semaphore:
-            return await _fetch_market_chunk(client, world, chunk, stats_within_ms)
+            res = await _fetch_market_chunk(client, world, chunk, stats_within_ms)
+        completed += 1
+        if on_progress:
+            pct = progress_start + int(completed / total_chunks * (progress_end - progress_start))
+            await on_progress(pct, f"Fetching market data… ({completed}/{total_chunks})")
+        return res
 
     async with httpx.AsyncClient() as client:
         tasks = [_fetch_with_sem(client, chunk) for chunk in chunks]
@@ -459,6 +479,7 @@ async def analyze(
     item_search: str = "",
     item_category: str = "",
     stats_within_days: int = 0,
+    on_progress=None,
 ) -> dict:
     """
     Analyze crafting profitability.
@@ -466,6 +487,8 @@ async def analyze(
     Returns a dict with 'recipes' (list of profit records), 'total', 'world', 'job'.
     """
     # Load and filter recipes
+    if on_progress:
+        await on_progress(5, "Loading recipes…")
     raw_recipes = await fetch_all_recipes()
 
     # Build full set of craftable item IDs from all recipes (before filtering)
@@ -477,6 +500,8 @@ async def analyze(
             craftable_ids.add(item_id)
 
     # Fetch gatherable IDs (cached after first call). Non-fatal: badges fall back to "buy" on error.
+    if on_progress:
+        await on_progress(15, "Loading item data…")
     try:
         gatherable_ids = await fetch_gatherable_ids()
     except Exception:
@@ -528,9 +553,15 @@ async def analyze(
         for ing in recipe["ingredients"]:
             all_ids.add(ing["id"])
 
-    market, failed_chunks = await fetch_market_data(world, sorted(all_ids), stats_within_days)
+    if on_progress:
+        await on_progress(28, f"Querying market for {len(all_ids)} items…")
+    market, failed_chunks = await fetch_market_data(
+        world, sorted(all_ids), stats_within_days, on_progress=on_progress
+    )
 
     # Calculate profitability
+    if on_progress:
+        await on_progress(92, "Calculating profitability…")
     week_cutoff = time.time() - 7 * 86400  # fixed 7-day window for weekly columns
     results: list[dict] = []
     stats_no_price = 0
