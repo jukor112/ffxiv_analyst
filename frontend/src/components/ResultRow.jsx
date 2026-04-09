@@ -14,6 +14,10 @@ const JOB_STYLES = {
     CUL: { background: "rgba(37,24,16,0.9)", color: "#c87030" },
 };
 
+const JOB_BADGE_CLASS =
+    "inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] leading-none font-extrabold tracking-wide whitespace-nowrap overflow-hidden sm:px-1.5 sm:py-0.5";
+const JOB_ICON_CLASS = "block w-3.5 h-3.5 shrink-0 object-contain";
+
 export default function ResultRow({ r, idx, expanded, onToggle }) {
     const [excluded, setExcluded] = useState(new Set());
     const [tipPos, setTipPos] = useState(null); // { x, y, below }
@@ -82,87 +86,89 @@ export default function ResultRow({ r, idx, expanded, onToggle }) {
                 onClick={() => onToggle(idx)}
             >
                 {/* Item */}
-                <td className={tdCls + "flex items-center gap-1"}>
-                    <span className="font-medium">{r.item_name}</span>
-                    {r.amount_result > 1 && (
-                        <span className="text-[11px] text-muted-foreground ml-1">×{r.amount_result}</span>
-                    )}
-                    <a
-                        className="inline-flex items-center justify-center ml-2 opacity-50 hover:opacity-100 transition-opacity"
-                        href={`https://universalis.app/market/${r.item_id}`}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                        onClick={(e) => e.stopPropagation()}
-                        title="View on Universalis"
-                    >
-                        {/* Universalis bar-chart icon */}
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="13"
-                            height="13"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="#5a9fe0"
-                            strokeWidth="2.2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
+                <td className={tdCls}>
+                    <div className="flex items-center">
+                        <span className="font-medium">{r.item_name}</span>
+                        {r.amount_result > 1 && (
+                            <span className="text-[11px] text-muted-foreground ml-1">×{r.amount_result}</span>
+                        )}
+                        <a
+                            className="inline-flex items-center justify-center ml-2 opacity-50 hover:opacity-100 transition-opacity"
+                            href={`https://universalis.app/market/${r.item_id}`}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                            onClick={(e) => e.stopPropagation()}
+                            title="View on Universalis"
                         >
-                            <line x1="18" y1="20" x2="18" y2="10" />
-                            <line x1="12" y1="20" x2="12" y2="4" />
-                            <line x1="6" y1="20" x2="6" y2="14" />
-                        </svg>
-                    </a>
-                    <a
-                        className="inline-flex items-center justify-center ml-1 opacity-50 hover:opacity-100 transition-opacity"
-                        href={`https://garlandtools.org/db/#item/${r.item_id}`}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                        onClick={(e) => e.stopPropagation()}
-                        title="View on Garland Tools"
-                    >
-                        {/* Garland Tools book icon */}
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="13"
-                            height="13"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="#60b87a"
-                            strokeWidth="2.2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
+                            {/* Universalis bar-chart icon */}
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="13"
+                                height="13"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="#5a9fe0"
+                                strokeWidth="2.2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            >
+                                <line x1="18" y1="20" x2="18" y2="10" />
+                                <line x1="12" y1="20" x2="12" y2="4" />
+                                <line x1="6" y1="20" x2="6" y2="14" />
+                            </svg>
+                        </a>
+                        <a
+                            className="inline-flex items-center justify-center ml-1 opacity-50 hover:opacity-100 transition-opacity"
+                            href={`https://garlandtools.org/db/#item/${r.item_id}`}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                            onClick={(e) => e.stopPropagation()}
+                            title="View on Garland Tools"
                         >
-                            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-                            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-                        </svg>
-                    </a>
-                    <a
-                        className="inline-flex items-center justify-center ml-1 opacity-50 hover:opacity-100 transition-opacity"
-                        href={`https://ffxiv.consolegameswiki.com/wiki/${encodeURIComponent(r.item_name).replace(/%20/g, "_")}`}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                        onClick={(e) => e.stopPropagation()}
-                        title="View on FF14 Wiki"
-                    >
-                        {/* Wiki scroll icon */}
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="13"
-                            height="13"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="#c8a84b"
-                            strokeWidth="2.2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
+                            {/* Garland Tools book icon */}
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="13"
+                                height="13"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="#60b87a"
+                                strokeWidth="2.2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            >
+                                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+                            </svg>
+                        </a>
+                        <a
+                            className="inline-flex items-center justify-center ml-1 opacity-50 hover:opacity-100 transition-opacity"
+                            href={`https://ffxiv.consolegameswiki.com/wiki/${encodeURIComponent(r.item_name).replace(/%20/g, "_")}`}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                            onClick={(e) => e.stopPropagation()}
+                            title="View on FF14 Wiki"
                         >
-                            <path d="M8 21h12a2 2 0 0 0 2-2v-2H10v2a2 2 0 0 1-2 2z" />
-                            <path d="M19 3H6a2 2 0 0 0-2 2v12h14V5a2 2 0 0 0-1-1.73" />
-                            <path d="M8 21a2 2 0 0 1-2-2V5" />
-                            <line x1="11" y1="7" x2="17" y2="7" />
-                            <line x1="11" y1="11" x2="17" y2="11" />
-                        </svg>
-                    </a>
+                            {/* Wiki scroll icon */}
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="13"
+                                height="13"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="#c8a84b"
+                                strokeWidth="2.2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            >
+                                <path d="M8 21h12a2 2 0 0 0 2-2v-2H10v2a2 2 0 0 1-2 2z" />
+                                <path d="M19 3H6a2 2 0 0 0-2 2v12h14V5a2 2 0 0 0-1-1.73" />
+                                <path d="M8 21a2 2 0 0 1-2-2V5" />
+                                <line x1="11" y1="7" x2="17" y2="7" />
+                                <line x1="11" y1="11" x2="17" y2="11" />
+                            </svg>
+                        </a>
+                    </div>
                 </td>
 
                 {/* Job */}
@@ -172,13 +178,8 @@ export default function ResultRow({ r, idx, expanded, onToggle }) {
                         (() => {
                             const jStyle = JOB_STYLES[jobs[0]] ?? { background: "rgba(30,30,30,0.9)", color: "#888" };
                             return (
-                                <span
-                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-extrabold tracking-wide"
-                                    style={jStyle}
-                                >
-                                    {jobIcons[0] && (
-                                        <img src={jobIcons[0]} alt={jobs[0]} className="w-3.5 h-3.5 object-contain" />
-                                    )}
+                                <span className={JOB_BADGE_CLASS} style={jStyle}>
+                                    {jobIcons[0] && <img src={jobIcons[0]} alt={jobs[0]} className={JOB_ICON_CLASS} />}
                                     {jobs[0]}
                                 </span>
                             );
@@ -192,7 +193,7 @@ export default function ResultRow({ r, idx, expanded, onToggle }) {
                             onMouseLeave={handleJobMouseLeave}
                         >
                             <span
-                                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-extrabold tracking-wide cursor-default"
+                                className={`${JOB_BADGE_CLASS} gap-0.5 cursor-default`}
                                 style={{ background: "rgba(30,30,46,0.9)", color: "#a0a0c0" }}
                             >
                                 <span>{jobs.length}×</span>
@@ -218,17 +219,9 @@ export default function ResultRow({ r, idx, expanded, onToggle }) {
                                                 color: "#888",
                                             };
                                             return (
-                                                <span
-                                                    key={job}
-                                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-extrabold tracking-wide"
-                                                    style={jStyle}
-                                                >
+                                                <span key={job} className={JOB_BADGE_CLASS} style={jStyle}>
                                                     {jobIcons[i] && (
-                                                        <img
-                                                            src={jobIcons[i]}
-                                                            alt={job}
-                                                            className="w-3.5 h-3.5 object-contain"
-                                                        />
+                                                        <img src={jobIcons[i]} alt={job} className={JOB_ICON_CLASS} />
                                                     )}
                                                     {job}
                                                 </span>
@@ -310,7 +303,7 @@ export default function ResultRow({ r, idx, expanded, onToggle }) {
             {expanded && (
                 <tr>
                     <td
-                        colSpan={10}
+                        colSpan={11}
                         className="bg-[#080818] p-0 border-b border-border"
                         onClick={(e) => e.stopPropagation()}
                     >
