@@ -69,7 +69,7 @@ export default function ResultRow({ r, idx, expanded, onToggle }) {
     const jobs = r.jobs ?? [r.job];
     const jobIcons = r.job_icons ?? [r.job_icon];
 
-    const tdCls = "px-3 py-2.5 text-[13px] align-middle border-b border-border";
+    const tdCls = "px-3 py-2.5 text-[13px] align-middle border-b border-border ";
 
     return (
         <>
@@ -82,19 +82,86 @@ export default function ResultRow({ r, idx, expanded, onToggle }) {
                 onClick={() => onToggle(idx)}
             >
                 {/* Item */}
-                <td className={tdCls}>
+                <td className={tdCls + "flex items-center gap-1"}>
                     <span className="font-medium">{r.item_name}</span>
                     {r.amount_result > 1 && (
                         <span className="text-[11px] text-muted-foreground ml-1">×{r.amount_result}</span>
                     )}
                     <a
-                        className="text-[11px] text-[#5a9fe0] no-underline hover:underline ml-2"
+                        className="inline-flex items-center justify-center ml-2 opacity-50 hover:opacity-100 transition-opacity"
                         href={`https://universalis.app/market/${r.item_id}`}
                         target="_blank"
                         rel="noreferrer noopener"
                         onClick={(e) => e.stopPropagation()}
+                        title="View on Universalis"
                     >
-                        ↗
+                        {/* Universalis bar-chart icon */}
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="13"
+                            height="13"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#5a9fe0"
+                            strokeWidth="2.2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        >
+                            <line x1="18" y1="20" x2="18" y2="10" />
+                            <line x1="12" y1="20" x2="12" y2="4" />
+                            <line x1="6" y1="20" x2="6" y2="14" />
+                        </svg>
+                    </a>
+                    <a
+                        className="inline-flex items-center justify-center ml-1 opacity-50 hover:opacity-100 transition-opacity"
+                        href={`https://garlandtools.org/db/#item/${r.item_id}`}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        onClick={(e) => e.stopPropagation()}
+                        title="View on Garland Tools"
+                    >
+                        {/* Garland Tools book icon */}
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="13"
+                            height="13"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#60b87a"
+                            strokeWidth="2.2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        >
+                            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+                        </svg>
+                    </a>
+                    <a
+                        className="inline-flex items-center justify-center ml-1 opacity-50 hover:opacity-100 transition-opacity"
+                        href={`https://ffxiv.consolegameswiki.com/wiki/${encodeURIComponent(r.item_name).replace(/%20/g, "_")}`}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        onClick={(e) => e.stopPropagation()}
+                        title="View on FF14 Wiki"
+                    >
+                        {/* Wiki scroll icon */}
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="13"
+                            height="13"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#c8a84b"
+                            strokeWidth="2.2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        >
+                            <path d="M8 21h12a2 2 0 0 0 2-2v-2H10v2a2 2 0 0 1-2 2z" />
+                            <path d="M19 3H6a2 2 0 0 0-2 2v12h14V5a2 2 0 0 0-1-1.73" />
+                            <path d="M8 21a2 2 0 0 1-2-2V5" />
+                            <line x1="11" y1="7" x2="17" y2="7" />
+                            <line x1="11" y1="11" x2="17" y2="11" />
+                        </svg>
                     </a>
                 </td>
 

@@ -45,6 +45,58 @@ const FURNITURE_CATS = new Set([
     "Rug",
 ]);
 
+// BiS gear: combat arms + armor + accessories + crafter/gatherer tools (Courtly / Crested / Gold)
+const BIS_CATS = new Set([
+    // Combat arms
+    "Arcanist",
+    "Archer",
+    "Astrologian",
+    "Blue Mage",
+    "Conjurer",
+    "Dancer",
+    "Dark Knight",
+    "Gladiator",
+    "Gunbreaker",
+    "Lancer",
+    "Machinist",
+    "Marauder",
+    "Pictomancer",
+    "Pugilist",
+    "Reaper",
+    "Red Mage",
+    "Rogue",
+    "Sage",
+    "Samurai",
+    "Scholar",
+    "Thaumaturge",
+    "Viper",
+    // Armor
+    "Shield",
+    "Head",
+    "Body",
+    "Legs",
+    "Hands",
+    "Feet",
+    // Accessories
+    "Necklace",
+    "Earring",
+    "Bracelet",
+    "Ring",
+    // Crafter & gatherer tools (incl. Goldsmith)
+    "Alchemist",
+    "Armorer",
+    "Blacksmith",
+    "Botanist",
+    "Carpenter",
+    "Culinarian",
+    "Fisher's Tackle",
+    "Fisher's Tools",
+    "Goldsmith",
+    "Leatherworker",
+    "Miner",
+    "Weaver",
+]);
+
 const PRESETS = [
     {
         label: "Default Dawntrail",
@@ -68,7 +120,7 @@ const PRESETS = [
             job: "ALL",
             sortBy: "profit",
             minProfit: 0,
-            minVelocity: 0,
+            minVelocity: 1,
             minLevel: 0,
             maxLevel: 0,
             itemSearch: "",
@@ -92,35 +144,21 @@ const PRESETS = [
         },
     },
     {
-        label: "Food Items",
-        desc: "Find food items that sell fast and in bulk",
+        label: "Consumable Items",
+        desc: "Find consumable items that sell fast and in bulk",
         params: {
-            job: "CUL",
+            job: "ALL",
             sortBy: "weekly_gil_earned",
             minProfit: 0,
             minVelocity: 2,
             minLevel: 0,
             maxLevel: 0,
             itemSearch: "",
-            categoryFilters: new Set(["Meal", "Seafood"]),
-            statsWithinDays: 0,
+            categoryFilters: new Set(["Meal", "Seafood", "Ingredient", "Medicine"]),
+            statsWithinDays: 7,
         },
     },
-    {
-        label: "Food (Trained Eye)",
-        desc: "Find food items craftable 100% HQ using the level 80 crafter skill, Trained Eye",
-        params: {
-            job: "CUL",
-            sortBy: "weekly_gil_earned",
-            minProfit: 0,
-            minVelocity: 0,
-            minLevel: 0,
-            maxLevel: 70,
-            itemSearch: "",
-            categoryFilters: new Set(["Meal", "Seafood"]),
-            statsWithinDays: 0,
-        },
-    },
+
     {
         label: "Furniture & Glamour",
         desc: "Find all worthwhile furniture and glamour items to craft",
@@ -128,7 +166,7 @@ const PRESETS = [
             job: "ALL",
             sortBy: "weekly_gil_earned",
             minProfit: 0,
-            minVelocity: 0,
+            minVelocity: 1,
             minLevel: 0,
             maxLevel: 0,
             itemSearch: "",
@@ -143,9 +181,9 @@ const PRESETS = [
             job: "ALL",
             sortBy: "profit",
             minProfit: 30000,
-            minVelocity: 0,
-            minLevel: 89,
-            maxLevel: 90,
+            minVelocity: 1,
+            minLevel: 99,
+            maxLevel: 100,
             itemSearch: "",
             categoryFilters: new Set(ALL_CATEGORIES),
             statsWithinDays: 0,
@@ -153,16 +191,16 @@ const PRESETS = [
     },
     {
         label: "BiS Gear",
-        desc: "Find all current BiS gear (Diadochos for Combat / Indagators for Crafter/Gatherer)",
+        desc: "Find all current BiS gear (Courtly for Combat / Crested for Crafter/Gatherer)",
         params: {
             job: "ALL",
             sortBy: "profit",
             minProfit: 0,
-            minVelocity: 0,
-            minLevel: 0,
-            maxLevel: 0,
+            minVelocity: 1,
+            minLevel: 100,
+            maxLevel: 100,
             itemSearch: "",
-            categoryFilters: new Set(ALL_CATEGORIES),
+            categoryFilters: BIS_CATS,
             statsWithinDays: 0,
         },
     },
@@ -421,20 +459,19 @@ export default function Controls({ worlds, cacheInfo, onAnalyze, loading }) {
                                 <option value={200}>200</option>
                             </NativeSelect>
                         </FieldGroup>
+                    </div>
 
-                        <div>
-                            <Label className="invisible block mb-1">&nbsp;</Label>
-                            <Button
-                                variant="primary"
-                                size="full"
-                                disabled={loading || !world}
-                                onClick={handleAnalyzeClick}
-                            >
-                                <ScanSearch size={14} className="mr-1.5" />
-                                Analyse Market
-                            </Button>
-                            <CacheRow info={cacheInfo} />
-                        </div>
+                    <div className="flex items-center gap-3">
+                        <Button
+                            variant="primary"
+                            disabled={loading || !world}
+                            onClick={handleAnalyzeClick}
+                            className="px-6"
+                        >
+                            <ScanSearch size={14} className="mr-1.5" />
+                            Analyse Market
+                        </Button>
+                        <CacheRow info={cacheInfo} />
                     </div>
                 </CardContent>
             </Card>
