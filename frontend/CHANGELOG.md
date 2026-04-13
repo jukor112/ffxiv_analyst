@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/jukor112/ffxiv_analyst/compare/v1.1.0...v1.2.0) (2026-04-13)
+
+
+### Features
+
+* add market scan for non-craftable tradeable items ([1c42ede](https://github.com/jukor112/ffxiv_analyst/commit/1c42ede35a7ea15bf0042d41fb639b15352322cf))
+
 # [1.1.0](https://github.com/jukor112/ffxiv_analyst/compare/v1.0.1...v1.1.0) (2026-04-13)
 
 
