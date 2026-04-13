@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/jukor112/ffxiv_analyst/compare/v1.0.1...v1.1.0) (2026-04-13)
+
+
+### Features
+
+* patch-based cache invalidation for recipes and gathering data ([12646ce](https://github.com/jukor112/ffxiv_analyst/commit/12646ce0e0f94f038fe95fdfe6792f24ffeba8c4))
+
 ## [1.0.1](https://github.com/jukor112/ffxiv_analyst/compare/v1.0.0...v1.0.1) (2026-04-09)
 
 
