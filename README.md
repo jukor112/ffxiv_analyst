@@ -14,6 +14,7 @@ A crafting profitability tool for Final Fantasy XIV. Enter your server and filte
 - **Ingredient source badges** — each ingredient is tagged as `Market`, `Craft`, `Gather`, or `NPC` automatically
 - **Flexible filtering** — filter by job, level range, min profit, min daily sales, item name, and item category
 - **Sort by anything** — profit, margin, weekly gil earned, weekly quantity sold, revenue, cost, or level
+- **Market scan** — separate mode to find profitable non-craftable tradeable items (drops, special-shop purchases) ranked by weekly gil earned, daily velocity, or price
 - **Stale cache indicator** — shows cache age (in hours or days), current patch version, and warns when cache is stale
 - **Deployable to Vercel** — serverless Python backend + static frontend with zero extra infrastructure
 
@@ -33,15 +34,16 @@ A crafting profitability tool for Final Fantasy XIV. Enter your server and filte
 
 ### Frontend
 
-| Component            | Technology        |
-| -------------------- | ----------------- |
-| Language             | JavaScript (ESM)  |
-| UI framework         | React 18          |
-| Build tool           | Vite 6            |
-| Styling              | Tailwind CSS 3    |
-| Icons                | lucide-react      |
-| Component primitives | Radix UI          |
-| Analytics            | @vercel/analytics |
+| Component            | Technology              |
+| -------------------- | ----------------------- |
+| Language             | JavaScript (ESM)        |
+| UI framework         | React 18                |
+| Build tool           | Vite 6                  |
+| Styling              | Tailwind CSS 3          |
+| Icons                | lucide-react            |
+| Component primitives | Radix UI                |
+| Analytics            | @vercel/analytics       |
+| Performance          | @vercel/speed-insights  |
 
 ---
 
@@ -79,6 +81,7 @@ ffxiv_analyst/
 │       │   ├── ResultRow.jsx       # Per-recipe row, ingredient exclusion logic
 │       │   ├── IngredientPanel.jsx # Expandable ingredient breakdown per row
 │       │   ├── ItemFilterModal.jsx # Category tree modal with presets
+│       │   ├── MarketScanRow.jsx   # Per-item row for the market scan results table
 │       │   ├── CacheRow.jsx        # Cache age/status widget in Controls
 │       │   ├── StatusBar.jsx       # Colored status strip (loading / ok / error)
 │       │   ├── ProgressBar.jsx     # Animated bar driven by SSE progress events
@@ -264,6 +267,31 @@ Runs a full analysis and streams progress via **Server-Sent Events (SSE)**. This
 
 ---
 
+### `GET /api/analyze/market-scan`
+
+Runs a market scan for non-craftable, non-gatherable tradeable items (drops, special-shop purchases) and returns the complete result as a single JSON response.
+
+---
+
+### `GET /api/analyze/market-scan/stream` ⭐
+
+Runs a market scan and streams progress via **SSE**. This is the endpoint used by the market scan UI tab.
+
+**Done event**:
+
+```json
+{
+  "type": "done",
+  "data": {
+    "items": [ ... ],
+    "total": 18427,
+    "world": "Gilgamesh"
+  }
+}
+```
+
+---
+
 ### Query Parameters (for `/api/analyze` and `/api/analyze/stream`)
 
 | Parameter           | Type   | Default      | Description                                                       |
@@ -294,6 +322,21 @@ Runs a full analysis and streams progress via **Server-Sent Events (SSE)**. This
 
 ---
 
+### Query Parameters (for `/api/analyze/market-scan` and `/api/analyze/market-scan/stream`)
+
+| Parameter           | Type   | Default              | Description                                                       |
+| ------------------- | ------ | -------------------- | ----------------------------------------------------------------- |
+| `world`             | string | **required**         | World or datacenter name                                          |
+| `min_price`         | int    | `0`                  | Minimum list price in gil                                         |
+| `min_velocity`      | float  | `0.0`                | Minimum daily sale velocity                                       |
+| `limit`             | int    | `50`                 | Max results returned (1–200)                                      |
+| `sort_by`           | string | `weekly_gil_earned`  | Sort field: `weekly_gil_earned`, `weekly_qty_sold`, `velocity`, `current_price` |
+| `item_search`       | string | `""`                 | Comma-separated item name substrings (OR logic, case-insensitive) |
+| `item_category`     | string | `""`                 | Comma-separated item category substrings (OR logic)               |
+| `stats_within_days` | int    | `0`                  | Restrict sale history to last N days (0 = use all)                |
+
+---
+
 ## How the Analysis Works
 
 1. **Load recipes** — `fetch_all_recipes()` pulls all recipes from XIVAPI v2 using concurrent paginated requests. Results are cached using patch-based invalidation (served indefinitely for the same game version, with a 7-day time-based fallback and a 30-day absolute cap). The pagination ceiling is derived dynamically from the highest row ID seen previously, reducing wasted requests after a patch.
@@ -312,10 +355,13 @@ Runs a full analysis and streams progress via **Server-Sent Events (SSE)**. This
 
 Recipe and gathering data is cached in `cache/` as JSON files:
 
-| File                      | Contents                                                |
-| ------------------------- | ------------------------------------------------------- |
-| `cache/recipes_v5.json`   | All FFXIV crafting recipes including NPC price data     |
-| `cache/gathering_v1.json` | Set of gatherable item IDs for ingredient source badges |
+| File                          | Contents                                                              | TTL                        |
+| ----------------------------- | --------------------------------------------------------------------- | -------------------------- |
+| `cache/recipes_v5.json`       | All FFXIV crafting recipes including NPC price data                   | Patch-based (30-day cap)   |
+| `cache/gathering_v1.json`     | Set of gatherable item IDs for ingredient source badges               | Patch-based (30-day cap)   |
+| `cache/special_shop_v2.json`  | Special-shop costs keyed by item ID (currency, cost, quantity)        | Bundled, refreshed manually |
+| `cache/item_names_v1.json`    | Persistent XIVAPI item name + category cache (grows incrementally)    | Never expires              |
+| `cache/marketable_v1.json`    | Full list of marketable item IDs from Universalis                     | 1 day                      |
 
 Cache format:
 

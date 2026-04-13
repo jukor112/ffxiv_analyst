@@ -1,5 +1,5 @@
 ﻿import { useState } from "react";
-import { ScanSearch, Filter } from "lucide-react";
+import { ScanSearch, Filter, Hammer, TrendingUp } from "lucide-react";
 import CacheRow from "./CacheRow";
 import ItemFilterModal, { CATEGORY_GROUPS } from "./ItemFilterModal";
 import { Button } from "./ui/button";
@@ -27,6 +27,13 @@ const SORT_OPTIONS = [
     { value: "weekly_qty_sold", label: "Weekly Qty Sold" },
     { value: "level", label: "Recipe Level" },
     { value: "revenue", label: "Revenue" },
+];
+
+const SCAN_SORT_OPTIONS = [
+    { value: "weekly_gil_earned", label: "Weekly Revenue" },
+    { value: "sell_price", label: "Min Price" },
+    { value: "velocity", label: "Sales/Day" },
+    { value: "weekly_qty_sold", label: "Weekly Qty Sold" },
 ];
 
 // All selectable category values across every group.
@@ -206,6 +213,69 @@ const PRESETS = [
     },
 ];
 
+const SCAN_PRESETS = [
+    {
+        label: "All Drops & Shop",
+        desc: "All non-craftable/non-gatherable items sorted by weekly revenue",
+        params: {
+            sortBy: "weekly_gil_earned",
+            minPrice: 0,
+            minVelocity: 1,
+            itemSearch: "",
+            categoryFilters: new Set(ALL_CATEGORIES),
+            statsWithinDays: 7,
+        },
+    },
+    {
+        label: "High Value",
+        desc: "Items listing for 100k+ gil, sorted by price",
+        params: {
+            sortBy: "sell_price",
+            minPrice: 100000,
+            minVelocity: 1,
+            itemSearch: "",
+            categoryFilters: new Set(ALL_CATEGORIES),
+            statsWithinDays: 0,
+        },
+    },
+    {
+        label: "Fast Sellers",
+        desc: "Items selling at least once per day",
+        params: {
+            sortBy: "weekly_gil_earned",
+            minPrice: 0,
+            minVelocity: 5,
+            itemSearch: "",
+            categoryFilters: new Set(ALL_CATEGORIES),
+            statsWithinDays: 7,
+        },
+    },
+    {
+        label: "Minions",
+        desc: "Minion items currently on the marketboard",
+        params: {
+            sortBy: "weekly_gil_earned",
+            minPrice: 0,
+            minVelocity: 1,
+            itemSearch: "",
+            categoryFilters: new Set(["Minion"]),
+            statsWithinDays: 0,
+        },
+    },
+    {
+        label: "Triple Triad",
+        desc: "Triple Triad cards currently on the marketboard",
+        params: {
+            sortBy: "sell_price",
+            minPrice: 0,
+            minVelocity: 1,
+            itemSearch: "",
+            categoryFilters: new Set(["Triple Triad Card"]),
+            statsWithinDays: 0,
+        },
+    },
+];
+
 function FieldGroup({ label, children }) {
     return (
         <div>
@@ -217,7 +287,11 @@ function FieldGroup({ label, children }) {
 
 const LS_KEY = "ffxiv_world";
 
-export default function Controls({ worlds, cacheInfo, onAnalyze, loading }) {
+export default function Controls({ worlds, cacheInfo, onAnalyze, onScan, loading }) {
+    // Shared mode state
+    const [mode, setMode] = useState("crafting"); // "crafting" | "scan"
+
+    // Crafting state
     const [world, setWorld] = useState(() => localStorage.getItem(LS_KEY) ?? "Gilgamesh");
     const [job, setJob] = useState("ALL");
     const [sortBy, setSortBy] = useState("profit");
@@ -232,6 +306,17 @@ export default function Controls({ worlds, cacheInfo, onAnalyze, loading }) {
     const [activePreset, setActivePreset] = useState(null);
     const [filterModalOpen, setFilterModalOpen] = useState(false);
 
+    // Scan state
+    const [scanSortBy, setScanSortBy] = useState("weekly_gil_earned");
+    const [scanMinPrice, setScanMinPrice] = useState(0);
+    const [scanMinVelocity, setScanMinVelocity] = useState(1);
+    const [scanLimit, setScanLimit] = useState(50);
+    const [scanItemSearch, setScanItemSearch] = useState("");
+    const [scanCategoryFilters, setScanCategoryFilters] = useState(new Set(ALL_CATEGORIES));
+    const [scanStatsWithinDays, setScanStatsWithinDays] = useState(7);
+    const [activeScanPreset, setActiveScanPreset] = useState(null);
+    const [scanFilterModalOpen, setScanFilterModalOpen] = useState(false);
+
     function applyPreset(preset) {
         const p = preset.params;
         setJob(p.job);
@@ -244,6 +329,17 @@ export default function Controls({ worlds, cacheInfo, onAnalyze, loading }) {
         setCategoryFilters(new Set(p.categoryFilters));
         setStatsWithinDays(p.statsWithinDays);
         setActivePreset(preset.label);
+    }
+
+    function applyScanPreset(preset) {
+        const p = preset.params;
+        setScanSortBy(p.sortBy);
+        setScanMinPrice(p.minPrice);
+        setScanMinVelocity(p.minVelocity);
+        setScanItemSearch(p.itemSearch);
+        setScanCategoryFilters(new Set(p.categoryFilters));
+        setScanStatsWithinDays(p.statsWithinDays);
+        setActiveScanPreset(preset.label);
     }
 
     function handleAnalyzeClick() {
@@ -264,6 +360,23 @@ export default function Controls({ worlds, cacheInfo, onAnalyze, loading }) {
             itemSearch,
             itemCategory,
             statsWithinDays,
+        });
+    }
+
+    function handleScanClick() {
+        const itemCategory =
+            scanCategoryFilters.size === 0 || scanCategoryFilters.size === ALL_CATEGORIES.size
+                ? ""
+                : [...scanCategoryFilters].join(",");
+        onScan({
+            world,
+            sortBy: scanSortBy,
+            minPrice: scanMinPrice,
+            minVelocity: scanMinVelocity,
+            limit: scanLimit,
+            itemSearch: scanItemSearch,
+            itemCategory,
+            statsWithinDays: scanStatsWithinDays,
         });
     }
 
@@ -295,32 +408,77 @@ export default function Controls({ worlds, cacheInfo, onAnalyze, loading }) {
         <>
             <Card className="mb-3.5">
                 <CardContent className="flex flex-col gap-4 pt-4">
+                    {/* Mode tabs */}
+                    <div className="flex gap-1 border-b border-border pb-3">
+                        <button
+                            type="button"
+                            onClick={() => setMode("crafting")}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[12px] font-semibold transition-colors duration-150 cursor-pointer ${
+                                mode === "crafting"
+                                    ? "bg-primary text-primary-foreground"
+                                    : "text-muted-foreground hover:text-primary"
+                            }`}
+                        >
+                            <Hammer size={13} />
+                            Crafting
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setMode("scan")}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[12px] font-semibold transition-colors duration-150 cursor-pointer ${
+                                mode === "scan"
+                                    ? "bg-primary text-primary-foreground"
+                                    : "text-muted-foreground hover:text-primary"
+                            }`}
+                        >
+                            <TrendingUp size={13} />
+                            Drops & Shop
+                        </button>
+                    </div>
+
                     {/* Preset buttons */}
                     <div>
                         <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
-                            Recommended Presets
+                            {mode === "crafting" ? "Recommended Presets" : "Quick Presets"}
                         </p>
                         <div className="flex flex-wrap gap-1.5">
-                            {PRESETS.map((preset) => (
-                                <button
-                                    key={preset.label}
-                                    title={preset.desc}
-                                    type="button"
-                                    onClick={() => applyPreset(preset)}
-                                    className={`text-[11px] font-medium px-2.5 py-1 rounded border transition-colors duration-150 cursor-pointer ${
-                                        activePreset === preset.label
-                                            ? "bg-primary text-primary-foreground border-primary"
-                                            : "border-border text-muted-foreground hover:border-primary hover:text-primary"
-                                    }`}
-                                >
-                                    {preset.label}
-                                </button>
-                            ))}
+                            {mode === "crafting"
+                                ? PRESETS.map((preset) => (
+                                      <button
+                                          key={preset.label}
+                                          title={preset.desc}
+                                          type="button"
+                                          onClick={() => applyPreset(preset)}
+                                          className={`text-[11px] font-medium px-2.5 py-1 rounded border transition-colors duration-150 cursor-pointer ${
+                                              activePreset === preset.label
+                                                  ? "bg-primary text-primary-foreground border-primary"
+                                                  : "border-border text-muted-foreground hover:border-primary hover:text-primary"
+                                          }`}
+                                      >
+                                          {preset.label}
+                                      </button>
+                                  ))
+                                : SCAN_PRESETS.map((preset) => (
+                                      <button
+                                          key={preset.label}
+                                          title={preset.desc}
+                                          type="button"
+                                          onClick={() => applyScanPreset(preset)}
+                                          className={`text-[11px] font-medium px-2.5 py-1 rounded border transition-colors duration-150 cursor-pointer ${
+                                              activeScanPreset === preset.label
+                                                  ? "bg-primary text-primary-foreground border-primary"
+                                                  : "border-border text-muted-foreground hover:border-primary hover:text-primary"
+                                          }`}
+                                      >
+                                          {preset.label}
+                                      </button>
+                                  ))}
                         </div>
                     </div>
 
                     {/* Main filter grid */}
                     <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-x-4 gap-y-3.5 items-end">
+                        {/* Server — shared */}
                         <FieldGroup label="Server / Datacenter">
                             <NativeSelect
                                 value={world}
@@ -330,129 +488,225 @@ export default function Controls({ worlds, cacheInfo, onAnalyze, loading }) {
                                 }}
                                 className="col-span-2"
                             >
-                                {worldOptions.length ? worldOptions : <option>Loading worlds\u2026</option>}
+                                {worldOptions.length ? worldOptions : <option>Loading worlds…</option>}
                             </NativeSelect>
                         </FieldGroup>
 
-                        <FieldGroup label="Job Class">
-                            <NativeSelect value={job} onChange={(e) => setJob(e.target.value)}>
-                                {JOBS.map((j) => (
-                                    <option key={j.value} value={j.value}>
-                                        {j.label}
-                                    </option>
-                                ))}
-                            </NativeSelect>
-                        </FieldGroup>
+                        {/* ── Crafting-only fields ── */}
+                        {mode === "crafting" && (
+                            <FieldGroup label="Job Class">
+                                <NativeSelect value={job} onChange={(e) => setJob(e.target.value)}>
+                                    {JOBS.map((j) => (
+                                        <option key={j.value} value={j.value}>
+                                            {j.label}
+                                        </option>
+                                    ))}
+                                </NativeSelect>
+                            </FieldGroup>
+                        )}
 
+                        {/* Sort By — mode-aware */}
                         <FieldGroup label="Sort By">
-                            <NativeSelect value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-                                {SORT_OPTIONS.map((o) => (
-                                    <option key={o.value} value={o.value}>
-                                        {o.label}
-                                    </option>
-                                ))}
-                            </NativeSelect>
+                            {mode === "crafting" ? (
+                                <NativeSelect value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                                    {SORT_OPTIONS.map((o) => (
+                                        <option key={o.value} value={o.value}>
+                                            {o.label}
+                                        </option>
+                                    ))}
+                                </NativeSelect>
+                            ) : (
+                                <NativeSelect value={scanSortBy} onChange={(e) => setScanSortBy(e.target.value)}>
+                                    {SCAN_SORT_OPTIONS.map((o) => (
+                                        <option key={o.value} value={o.value}>
+                                            {o.label}
+                                        </option>
+                                    ))}
+                                </NativeSelect>
+                            )}
                         </FieldGroup>
 
-                        <FieldGroup label="Min Profit">
-                            <SuffixInput
-                                type="number"
-                                value={minProfit}
-                                min="0"
-                                step="1000"
-                                placeholder="0"
-                                suffix="Gil"
-                                onChange={(e) => setMinProfit(parseInt(e.target.value) || 0)}
-                            />
-                        </FieldGroup>
+                        {/* Min Profit / Min Price */}
+                        {mode === "crafting" ? (
+                            <FieldGroup label="Min Profit">
+                                <SuffixInput
+                                    type="number"
+                                    value={minProfit}
+                                    min="0"
+                                    step="1000"
+                                    placeholder="0"
+                                    suffix="Gil"
+                                    onChange={(e) => setMinProfit(parseInt(e.target.value) || 0)}
+                                />
+                            </FieldGroup>
+                        ) : (
+                            <FieldGroup label="Min Price">
+                                <SuffixInput
+                                    type="number"
+                                    value={scanMinPrice}
+                                    min="0"
+                                    step="1000"
+                                    placeholder="0"
+                                    suffix="Gil"
+                                    onChange={(e) => setScanMinPrice(parseInt(e.target.value) || 0)}
+                                />
+                            </FieldGroup>
+                        )}
 
+                        {/* Min Sales/Day */}
                         <FieldGroup label="Min Sales/Day">
-                            <SuffixInput
-                                type="number"
-                                value={minVelocity}
-                                min="1"
-                                step="0.1"
-                                placeholder="1"
-                                suffix="Sales/day"
-                                onChange={(e) => setMinVelocity(Math.max(1, parseFloat(e.target.value) || 1))}
-                            />
+                            {mode === "crafting" ? (
+                                <SuffixInput
+                                    type="number"
+                                    value={minVelocity}
+                                    min="1"
+                                    step="0.1"
+                                    placeholder="1"
+                                    suffix="Sales/day"
+                                    onChange={(e) => setMinVelocity(Math.max(1, parseFloat(e.target.value) || 1))}
+                                />
+                            ) : (
+                                <SuffixInput
+                                    type="number"
+                                    value={scanMinVelocity}
+                                    min="1"
+                                    step="0.1"
+                                    placeholder="1"
+                                    suffix="Sales/day"
+                                    onChange={(e) => setScanMinVelocity(parseFloat(e.target.value) || 0)}
+                                />
+                            )}
                         </FieldGroup>
 
+                        {/* Sale Period */}
                         <FieldGroup label="Sale Period">
                             <SuffixInput
                                 type="number"
-                                value={statsWithinDays === 0 ? "" : statsWithinDays}
+                                value={
+                                    mode === "crafting"
+                                        ? statsWithinDays === 0
+                                            ? ""
+                                            : statsWithinDays
+                                        : scanStatsWithinDays === 0
+                                          ? ""
+                                          : scanStatsWithinDays
+                                }
                                 min="0"
                                 max="365"
                                 step="1"
                                 placeholder="Any"
                                 suffix="Days"
-                                onChange={(e) => setStatsWithinDays(parseInt(e.target.value) || 0)}
+                                onChange={(e) => {
+                                    const v = parseInt(e.target.value) || 0;
+                                    mode === "crafting" ? setStatsWithinDays(v) : setScanStatsWithinDays(v);
+                                }}
                             />
                         </FieldGroup>
 
-                        <FieldGroup label="Min Level">
-                            <SuffixInput
-                                type="number"
-                                value={minLevel === 0 ? "" : minLevel}
-                                min="0"
-                                max="100"
-                                step="1"
-                                placeholder="Any"
-                                suffix="Lvl"
-                                onChange={(e) => setMinLevel(parseInt(e.target.value) || 0)}
-                            />
-                        </FieldGroup>
+                        {/* Crafting-only level fields */}
+                        {mode === "crafting" && (
+                            <>
+                                <FieldGroup label="Min Level">
+                                    <SuffixInput
+                                        type="number"
+                                        value={minLevel === 0 ? "" : minLevel}
+                                        min="0"
+                                        max="100"
+                                        step="1"
+                                        placeholder="Any"
+                                        suffix="Lvl"
+                                        onChange={(e) => setMinLevel(parseInt(e.target.value) || 0)}
+                                    />
+                                </FieldGroup>
 
-                        <FieldGroup label="Max Level">
-                            <SuffixInput
-                                type="number"
-                                value={maxLevel === 0 ? "" : maxLevel}
-                                min="0"
-                                max="100"
-                                step="1"
-                                placeholder="Any"
-                                suffix="Lvl"
-                                onChange={(e) => setMaxLevel(parseInt(e.target.value) || 0)}
-                            />
-                        </FieldGroup>
+                                <FieldGroup label="Max Level">
+                                    <SuffixInput
+                                        type="number"
+                                        value={maxLevel === 0 ? "" : maxLevel}
+                                        min="0"
+                                        max="100"
+                                        step="1"
+                                        placeholder="Any"
+                                        suffix="Lvl"
+                                        onChange={(e) => setMaxLevel(parseInt(e.target.value) || 0)}
+                                    />
+                                </FieldGroup>
+                            </>
+                        )}
 
+                        {/* Item Name Search */}
                         <FieldGroup label="Item Name Search">
                             <div className="flex rounded-md border border-border bg-input overflow-hidden focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/50 transition-colors duration-150">
                                 <input
                                     type="text"
-                                    value={itemSearch}
-                                    placeholder="e.g. Diadochos"
+                                    value={mode === "crafting" ? itemSearch : scanItemSearch}
+                                    placeholder={mode === "crafting" ? "e.g. Diadochos" : "e.g. Bahamut"}
                                     className="flex-1 min-w-0 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground bg-transparent outline-none border-0"
-                                    onChange={(e) => setItemSearch(e.target.value)}
+                                    onChange={(e) =>
+                                        mode === "crafting"
+                                            ? setItemSearch(e.target.value)
+                                            : setScanItemSearch(e.target.value)
+                                    }
                                 />
                             </div>
                         </FieldGroup>
 
-                        <FieldGroup label="Item Filters">
-                            <button
-                                type="button"
-                                onClick={() => setFilterModalOpen(true)}
-                                className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm rounded-md border border-border bg-input text-left hover:border-primary transition-colors duration-150 cursor-pointer"
-                            >
-                                <span className="flex items-center gap-1.5 text-muted-foreground">
-                                    <Filter size={12} />
-                                    {categoryFilters.size === 0
-                                        ? "No Categories"
-                                        : categoryFilters.size === ALL_CATEGORIES.size
-                                          ? "All Categories"
-                                          : `${categoryFilters.size} / ${ALL_CATEGORIES.size} categories`}
-                                </span>
-                                {categoryFilters.size > 0 && categoryFilters.size < ALL_CATEGORIES.size && (
-                                    <span className="text-[10px] font-bold bg-primary text-primary-foreground rounded-full px-1.5 py-0.5 leading-none">
-                                        {categoryFilters.size}
+                        {/* Item Filters — crafting uses modal; scan uses text input */}
+                        {mode === "crafting" ? (
+                            <FieldGroup label="Item Filters">
+                                <button
+                                    type="button"
+                                    onClick={() => setFilterModalOpen(true)}
+                                    className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm rounded-md border border-border bg-input text-left hover:border-primary transition-colors duration-150 cursor-pointer"
+                                >
+                                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                                        <Filter size={12} />
+                                        {categoryFilters.size === 0
+                                            ? "No Categories"
+                                            : categoryFilters.size === ALL_CATEGORIES.size
+                                              ? "All Categories"
+                                              : `${categoryFilters.size} / ${ALL_CATEGORIES.size} categories`}
                                     </span>
-                                )}
-                            </button>
-                        </FieldGroup>
+                                    {categoryFilters.size > 0 && categoryFilters.size < ALL_CATEGORIES.size && (
+                                        <span className="text-[10px] font-bold bg-primary text-primary-foreground rounded-full px-1.5 py-0.5 leading-none">
+                                            {categoryFilters.size}
+                                        </span>
+                                    )}
+                                </button>
+                            </FieldGroup>
+                        ) : (
+                            <FieldGroup label="Category Filter">
+                                <button
+                                    type="button"
+                                    onClick={() => setScanFilterModalOpen(true)}
+                                    className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm rounded-md border border-border bg-input text-left hover:border-primary transition-colors duration-150 cursor-pointer"
+                                >
+                                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                                        <Filter size={12} />
+                                        {scanCategoryFilters.size === 0
+                                            ? "No Categories"
+                                            : scanCategoryFilters.size === ALL_CATEGORIES.size
+                                              ? "All Categories"
+                                              : `${scanCategoryFilters.size} / ${ALL_CATEGORIES.size} categories`}
+                                    </span>
+                                    {scanCategoryFilters.size > 0 && scanCategoryFilters.size < ALL_CATEGORIES.size && (
+                                        <span className="text-[10px] font-bold bg-primary text-primary-foreground rounded-full px-1.5 py-0.5 leading-none">
+                                            {scanCategoryFilters.size}
+                                        </span>
+                                    )}
+                                </button>
+                            </FieldGroup>
+                        )}
 
+                        {/* Results Limit */}
                         <FieldGroup label="Results Limit">
-                            <NativeSelect value={limit} onChange={(e) => setLimit(parseInt(e.target.value))}>
+                            <NativeSelect
+                                value={mode === "crafting" ? limit : scanLimit}
+                                onChange={(e) => {
+                                    const v = parseInt(e.target.value);
+                                    mode === "crafting" ? setLimit(v) : setScanLimit(v);
+                                }}
+                            >
                                 <option value={25}>25</option>
                                 <option value={50}>50</option>
                                 <option value={100}>100</option>
@@ -462,15 +716,27 @@ export default function Controls({ worlds, cacheInfo, onAnalyze, loading }) {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <Button
-                            variant="primary"
-                            disabled={loading || !world}
-                            onClick={handleAnalyzeClick}
-                            className="px-6"
-                        >
-                            <ScanSearch size={14} className="mr-1.5" />
-                            Analyse Market
-                        </Button>
+                        {mode === "crafting" ? (
+                            <Button
+                                variant="primary"
+                                disabled={loading || !world}
+                                onClick={handleAnalyzeClick}
+                                className="px-6"
+                            >
+                                <ScanSearch size={14} className="mr-1.5" />
+                                Analyse Market
+                            </Button>
+                        ) : (
+                            <Button
+                                variant="primary"
+                                disabled={loading || !world}
+                                onClick={handleScanClick}
+                                className="px-6"
+                            >
+                                <TrendingUp size={14} className="mr-1.5" />
+                                Scan Drops & Shop
+                            </Button>
+                        )}
                         <CacheRow info={cacheInfo} />
                     </div>
                 </CardContent>
@@ -481,6 +747,13 @@ export default function Controls({ worlds, cacheInfo, onAnalyze, loading }) {
                     selected={categoryFilters}
                     onChange={setCategoryFilters}
                     onClose={() => setFilterModalOpen(false)}
+                />
+            )}
+            {scanFilterModalOpen && (
+                <ItemFilterModal
+                    selected={scanCategoryFilters}
+                    onChange={setScanCategoryFilters}
+                    onClose={() => setScanFilterModalOpen(false)}
                 />
             )}
         </>

@@ -74,3 +74,66 @@ export function analyzeStream(params, onProgress) {
         };
     });
 }
+
+/**
+ * Stream market-scan results via SSE.
+ * Same contract as analyzeStream but targets the /market-scan endpoints.
+ */
+export function marketScanStream(params, onProgress) {
+    return new Promise((resolve, reject) => {
+        const url = `/api/analyze/market-scan/stream?${params}`;
+        const es = new EventSource(url);
+
+        let watchdog = setTimeout(() => {
+            es.close();
+            reject(new Error("Market scan timed out — Universalis may be slow, try again"));
+        }, 300_000);
+
+        const done = (fn) => {
+            clearTimeout(watchdog);
+            fn();
+        };
+
+        es.onmessage = (e) => {
+            clearTimeout(watchdog);
+            watchdog = setTimeout(() => {
+                es.close();
+                reject(new Error("Market scan timed out — Universalis may be slow, try again"));
+            }, 300_000);
+
+            let event;
+            try {
+                event = JSON.parse(e.data);
+            } catch {
+                return;
+            }
+            if (event.type === "progress") {
+                onProgress(event.pct, event.msg);
+            } else if (event.type === "done") {
+                done(() => {
+                    es.close();
+                    resolve(event.data);
+                });
+            } else if (event.type === "error") {
+                done(() => {
+                    es.close();
+                    reject(new Error(event.msg));
+                });
+            }
+        };
+
+        es.onerror = () => {
+            done(() => {
+                es.close();
+                onProgress(5, "Streaming unavailable, using fallback…");
+                fetch(`/api/analyze/market-scan?${params}`)
+                    .then((r) => {
+                        if (!r.ok) return r.text().then((t) => Promise.reject(new Error(`HTTP ${r.status}: ${t}`)));
+                        return r.json();
+                    })
+                    .then((data) => resolve(data))
+                    .catch((err) => reject(err));
+            });
+        };
+    });
+}

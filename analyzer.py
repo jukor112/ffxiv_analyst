@@ -40,6 +40,10 @@ RECIPE_CACHE_TTL = 86_400 * 7   # 7 days — time-based fallback when game versi
 RECIPE_CACHE_HARD_TTL = 86_400 * 30  # 30-day absolute cap
 RECIPE_CACHE_KEY = "recipes_v5"  # v5 = actually fetch ingredient PriceMid (NPC shop price)
 GATHERING_CACHE_KEY = "gathering_v1"
+MARKETABLE_CACHE_KEY = "marketable_v1"
+MARKETABLE_CACHE_TTL = 86_400  # 1 day
+ITEM_NAMES_CACHE_KEY = "item_names_v1"
+ITEM_NAMES_CONCURRENCY = 20  # Max concurrent XIVAPI individual name lookups
 
 XIVAPI_BASE = "https://xivapi.com"
 XIVAPI_V2_BASE = "https://beta.xivapi.com/api/1"
@@ -811,4 +815,286 @@ async def analyze(
         "world": world,
         "job": job_abbr.upper(),
         "filter_stats": filter_stats,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Market Scan — non-craftable / non-gatherable tradeable items (drops, shops)
+# ---------------------------------------------------------------------------
+
+
+async def fetch_marketable_ids() -> set[int]:
+    """Return all item IDs that can be listed on the Universalis marketboard.
+
+    Result is cached for MARKETABLE_CACHE_TTL (1 day) since the set rarely changes.
+    """
+    path = _cache_path(MARKETABLE_CACHE_KEY)
+    if path.exists():
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if time.time() - data.get("timestamp", 0) < MARKETABLE_CACHE_TTL:
+                return set(data["payload"])
+        except Exception:
+            pass
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(f"{UNIVERSALIS_BASE}/marketable", timeout=30)
+        resp.raise_for_status()
+        ids = resp.json()  # Returns a plain list of integers
+
+    _save_cache(MARKETABLE_CACHE_KEY, ids)
+    return set(ids)
+
+
+async def fetch_item_names(item_ids: set[int]) -> dict[int, dict]:
+    """Return a dict of item_id → {name, category} for the given IDs.
+
+    Looks up missing names from XIVAPI v2 and merges them into a persistent cache so
+    subsequent calls are instant.  Item names never change, so the cache never expires.
+    """
+    path = _cache_path(ITEM_NAMES_CACHE_KEY)
+    known: dict[int, dict] = {}
+    if path.exists():
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+            known = {int(k): v for k, v in raw.get("payload", {}).items()}
+        except Exception:
+            pass
+
+    missing = item_ids - set(known.keys())
+    if missing:
+        semaphore = asyncio.Semaphore(ITEM_NAMES_CONCURRENCY)
+
+        async def _fetch_name(client: httpx.AsyncClient, iid: int) -> tuple[int, dict]:
+            async with semaphore:
+                try:
+                    resp = await client.get(
+                        f"{XIVAPI_V2_BASE}/sheet/Item/{iid}",
+                        params={"fields": "Name,ItemUICategory.Name"},
+                        timeout=10,
+                    )
+                    resp.raise_for_status()
+                    data = resp.json()
+                    fields = data.get("fields") or {}
+                    name = (fields.get("Name") or "").strip()
+                    cat_ref = fields.get("ItemUICategory") or {}
+                    category = ((cat_ref.get("fields") or {}).get("Name") or "").strip()
+                    return iid, {"name": name or f"Item #{iid}", "category": category or "Unknown"}
+                except Exception:
+                    return iid, {"name": f"Item #{iid}", "category": "Unknown"}
+
+        async with httpx.AsyncClient() as client:
+            results = await asyncio.gather(*[_fetch_name(client, iid) for iid in missing])
+
+        for iid, info in results:
+            known[iid] = info
+
+        # Persist updated cache (string keys for JSON serialisation)
+        path.write_text(
+            json.dumps(
+                {"timestamp": time.time(), "payload": {str(k): v for k, v in known.items()}},
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+
+    return {iid: known.get(iid, {"name": f"Item #{iid}", "category": "Unknown"}) for iid in item_ids}
+
+
+def _load_special_shop() -> dict[int, list]:
+    """Load the bundled special-shop data.  Returns {item_id: [{currency, cost, per}]}.
+
+    Handles both the plain-payload format (historic files kept in cache/) and the
+    standard cache-envelope format (timestamp + payload).
+    """
+    for key in ("special_shop_v2", "special_shop_v1"):
+        path = _cache_path(key)
+        if path.exists():
+            try:
+                raw = json.loads(path.read_text(encoding="utf-8"))
+                # If the top-level keys look like item-IDs (numeric strings) it's a plain payload;
+                # otherwise it's a cache envelope with a nested "payload" key.
+                payload = raw if any(k.isdigit() for k in list(raw.keys())[:5]) else raw.get("payload", {})
+                return {int(k): v for k, v in payload.items() if k.isdigit()}
+            except Exception:
+                pass
+    return {}
+
+
+async def analyze_market_scan(
+    world: str,
+    min_price: int = 0,
+    min_velocity: float = 0.0,
+    limit: int = 50,
+    sort_by: str = "weekly_gil_earned",
+    item_search: str = "",
+    item_category: str = "",
+    stats_within_days: int = 0,
+    on_progress=None,
+) -> dict:
+    """Find profitable non-craftable, non-gatherable tradeable items (drops, shop purchases, etc.).
+
+    Returns a dict with 'items' (list of scan records), 'total', 'world'.
+    """
+    if on_progress:
+        await on_progress(5, "Loading item catalogs…")
+
+    # Fetch craftable and gatherable IDs in parallel
+    raw_recipes_task = asyncio.create_task(fetch_all_recipes())
+    gatherable_task = asyncio.create_task(fetch_gatherable_ids())
+
+    raw_recipes = await raw_recipes_task
+    craftable_ids: set[int] = set()
+    for raw in raw_recipes:
+        item_ref = ((raw.get("fields") or {}).get("ItemResult") or {})
+        if (iid := item_ref.get("row_id")):
+            craftable_ids.add(iid)
+
+    try:
+        gatherable_ids = await gatherable_task
+    except Exception:
+        gatherable_ids = set()
+
+    if on_progress:
+        await on_progress(15, "Fetching marketable items list…")
+
+    marketable_ids = await fetch_marketable_ids()
+    drop_ids = marketable_ids - craftable_ids - gatherable_ids
+    drop_ids_list = sorted(drop_ids)
+
+    if on_progress:
+        await on_progress(20, f"Scanning market for {len(drop_ids_list):,} items…")
+
+    market, failed_chunks = await fetch_market_data(
+        world,
+        drop_ids_list,
+        stats_within_days,
+        on_progress=on_progress,
+        progress_start=20,
+        progress_end=82,
+    )
+
+    if on_progress:
+        await on_progress(84, "Filtering candidates…")
+
+    week_cutoff = time.time() - 7 * 86400
+    candidates: list[dict] = []
+
+    for item_id, item_data in market.items():
+        sell_price = _best_sell_price(item_data)
+        if sell_price <= 0 or sell_price < min_price:
+            continue
+
+        velocity = (
+            float(item_data.get("nqSaleVelocity") or 0)
+            + float(item_data.get("hqSaleVelocity") or 0)
+        )
+        if velocity < min_velocity:
+            continue
+
+        history = item_data.get("recentHistory") or []
+        weekly_entries = [e for e in history if (e.get("timestamp") or 0) >= week_cutoff]
+
+        # Outlier removal (same as crafting analysis)
+        clean_entries = weekly_entries
+        if len(weekly_entries) >= 3:
+            _prices = sorted(e.get("pricePerUnit", 0) for e in weekly_entries)
+            _median = _prices[len(_prices) // 2]
+            if _median > 0:
+                clean_entries = [
+                    e for e in weekly_entries
+                    if (_median / MAX_PRICE_DIVERGENCE_RATIO)
+                    <= e.get("pricePerUnit", 0)
+                    <= (_median * MAX_PRICE_DIVERGENCE_RATIO)
+                ] or weekly_entries
+
+        weekly_qty_sold = sum(e.get("quantity", 0) for e in clean_entries)
+        weekly_gil_earned = sum(
+            e.get("pricePerUnit", 0) * e.get("quantity", 0) for e in clean_entries
+        )
+        last_sold = max((e.get("timestamp") or 0) for e in history) if history else None
+
+        candidates.append(
+            {
+                "item_id": item_id,
+                "sell_price": int(sell_price),
+                "velocity": round(velocity, 2),
+                "weekly_qty_sold": weekly_qty_sold,
+                "weekly_gil_earned": weekly_gil_earned,
+                "last_sold": last_sold,
+            }
+        )
+
+    # Sort candidates before name lookup so we only request names for the top slice
+    valid_sort_fields = {"weekly_gil_earned", "sell_price", "velocity", "weekly_qty_sold"}
+    sort_field = sort_by if sort_by in valid_sort_fields else "weekly_gil_earned"
+    candidates.sort(key=lambda x: x[sort_field], reverse=True)
+
+    # Fetch names only for the top candidates (avoids requesting names for thousands of items)
+    name_lookup_limit = min(len(candidates), max(limit * 4, 400))
+    top_candidates = candidates[:name_lookup_limit]
+
+    if on_progress:
+        await on_progress(86, f"Fetching item names for top {len(top_candidates)} items…")
+
+    top_ids = {c["item_id"] for c in top_candidates}
+    names = await fetch_item_names(top_ids)
+
+    # Load special-shop source data
+    shop_data = _load_special_shop()
+
+    search_terms = [t.strip().lower() for t in item_search.split(",") if t.strip()] if item_search else []
+    category_terms = (
+        [t.strip().lower() for t in item_category.split(",") if t.strip()] if item_category else []
+    )
+
+    if on_progress:
+        await on_progress(95, "Building results…")
+
+    results: list[dict] = []
+    for c in top_candidates:
+        iid = c["item_id"]
+        info = names.get(iid, {"name": f"Item #{iid}", "category": "Unknown"})
+        item_name = info["name"]
+        item_cat = info["category"]
+
+        # Skip items with no name (XIVAPI returned nothing useful)
+        if item_name.startswith("Item #"):
+            continue
+
+        if search_terms and not any(t in item_name.lower() for t in search_terms):
+            continue
+        if category_terms and not any(t in item_cat.lower() for t in category_terms):
+            continue
+
+        shop_entries = shop_data.get(iid, [])
+        if shop_entries:
+            source = "shop"
+            source_detail = "; ".join(
+                f"{e.get('currency', '?')} ×{e.get('cost', '?')}"
+                for e in shop_entries[:2]
+            )
+        else:
+            source = "drop"
+            source_detail = None
+
+        results.append(
+            {
+                "item_id": iid,
+                "item_name": item_name,
+                "item_category": item_cat,
+                "source": source,
+                "source_detail": source_detail,
+                **{k: c[k] for k in ("sell_price", "velocity", "weekly_qty_sold", "weekly_gil_earned", "last_sold")},
+            }
+        )
+        if len(results) >= limit:
+            break
+
+    return {
+        "items": results,
+        "total": len(results),
+        "world": world,
+        "scan_pool": len(drop_ids_list),
+        "candidates_found": len(candidates),
     }

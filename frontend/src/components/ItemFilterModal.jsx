@@ -117,6 +117,7 @@ export const CATEGORY_GROUPS = [
             ["Gardening Items", "Gardening"],
             ["Paintings", "Painting"],
             ["Registrable Miscellany", "Registrable"],
+            ["Triple Triad Cards", "Triple Triad Card"],
         ],
     },
 ];

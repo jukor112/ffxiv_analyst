@@ -31,6 +31,10 @@ frontend/dist/
 cache/*.json
 !cache/recipes_v5.json
 !cache/gathering_v1.json
+!cache/marketable_v1.json
+!cache/item_names_v1.json
+!cache/special_shop_v2.json
+!cache/special_shop_v1.json
 
 # OS
 .DS_Store

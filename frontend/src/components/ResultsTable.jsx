@@ -1,13 +1,24 @@
-import { TABLE_COLS } from "../utils/format";
+import { TABLE_COLS, SCAN_TABLE_COLS } from "../utils/format";
 import ResultRow from "./ResultRow";
+import MarketScanRow from "./MarketScanRow";
 
-export default function ResultsTable({ results, sortField, sortAsc, expandedIds, onSort, onToggle }) {
+export default function ResultsTable({
+    results,
+    sortField,
+    sortAsc,
+    expandedIds,
+    onSort,
+    onToggle,
+    mode = "crafting",
+}) {
+    const cols = mode === "scan" ? SCAN_TABLE_COLS : TABLE_COLS;
+
     return (
         <div className="overflow-x-auto">
             <table className="w-full border-collapse">
                 <thead>
                     <tr>
-                        {TABLE_COLS.map((col) => {
+                        {cols.map((col) => {
                             const active = col.key === sortField;
                             return (
                                 <th
@@ -31,15 +42,17 @@ export default function ResultsTable({ results, sortField, sortAsc, expandedIds,
                     </tr>
                 </thead>
                 <tbody>
-                    {results.map((r, idx) => (
-                        <ResultRow
-                            key={r.recipe_id}
-                            r={r}
-                            idx={idx}
-                            expanded={expandedIds.has(idx)}
-                            onToggle={onToggle}
-                        />
-                    ))}
+                    {mode === "scan"
+                        ? results.map((r, idx) => <MarketScanRow key={r.item_id} r={r} idx={idx} />)
+                        : results.map((r, idx) => (
+                              <ResultRow
+                                  key={r.recipe_id}
+                                  r={r}
+                                  idx={idx}
+                                  expanded={expandedIds.has(idx)}
+                                  onToggle={onToggle}
+                              />
+                          ))}
                 </tbody>
             </table>
         </div>

@@ -4,6 +4,7 @@ export function gil(n) {
 }
 
 export const STRING_COLS = new Set(["item_name", "job"]);
+export const SCAN_STRING_COLS = new Set(["item_name", "item_category", "source"]);
 
 export const TABLE_COLS = [
     { key: "item_name", label: "Item" },
@@ -15,6 +16,18 @@ export const TABLE_COLS = [
     { key: "margin", label: "Margin" },
     { key: "weekly_gil_earned", label: "Weekly Gil" },
     { key: "weekly_purchases", label: "Purchases" },
+    { key: "velocity", label: "Sales/Day" },
+    { key: "weekly_qty_sold", label: "Qty Sold" },
+    { key: "last_sold", label: "Last Sold" },
+];
+
+export const SCAN_TABLE_COLS = [
+    { key: "item_name", label: "Item" },
+    { key: "item_category", label: "Category" },
+    { key: "source", label: "Source" },
+    { key: "sell_price", label: "Min Price" },
+    { key: "velocity", label: "Sales/Day" },
+    { key: "weekly_gil_earned", label: "Weekly Gil" },
     { key: "weekly_qty_sold", label: "Qty Sold" },
     { key: "last_sold", label: "Last Sold" },
 ];

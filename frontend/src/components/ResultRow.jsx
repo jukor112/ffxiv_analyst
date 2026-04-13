@@ -287,6 +287,13 @@ export default function ResultRow({ r, idx, expanded, onToggle }) {
                     </span>
                 </td>
 
+                {/* Sales/Day */}
+                <td className={tdCls}>
+                    <span className="text-[12px] text-[#5a9fe0]">
+                        {(r.velocity ?? 0).toLocaleString("en-US", { maximumFractionDigits: 1 })}
+                    </span>
+                </td>
+
                 {/* Qty Sold */}
                 <td className={tdCls}>
                     <span className="text-[12px] text-[#5a9fe0]">
@@ -303,7 +310,7 @@ export default function ResultRow({ r, idx, expanded, onToggle }) {
             {expanded && (
                 <tr>
                     <td
-                        colSpan={11}
+                        colSpan={12}
                         className="bg-[#080818] p-0 border-b border-border"
                         onClick={(e) => e.stopPropagation()}
                     >

@@ -12,7 +12,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from analyzer import JOBS, analyze, get_cache_info
+from analyzer import JOBS, analyze, analyze_market_scan, get_cache_info
 
 # ---------------------------------------------------------------------------
 # App
@@ -188,6 +188,93 @@ async def analyze_stream_endpoint(
                 sort_by=sort_by,
                 min_level=min_level,
                 max_level=max_level,
+                item_search=item_search,
+                item_category=item_category,
+                stats_within_days=stats_within_days,
+                on_progress=on_progress,
+            )
+            await queue.put({"type": "done", "data": result})
+        except Exception as exc:
+            await queue.put({"type": "error", "msg": str(exc)})
+
+    asyncio.create_task(run())
+
+    async def event_stream():
+        while True:
+            try:
+                event = await asyncio.wait_for(queue.get(), timeout=180.0)
+            except asyncio.TimeoutError:
+                yield f"data: {json.dumps({'type': 'error', 'msg': 'Analysis timed out — Universalis may be slow, try again'})}\n\n"
+                break
+            yield f"data: {json.dumps(event)}\n\n"
+            if event["type"] in ("done", "error"):
+                break
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+# ---------------------------------------------------------------------------
+# Market scan endpoints
+# ---------------------------------------------------------------------------
+
+
+@app.get("/api/analyze/market-scan")
+async def market_scan_endpoint(
+    world: str = Query(..., description="World or Datacenter name"),
+    min_price: int = Query(0, ge=0, description="Minimum list price in gil"),
+    min_velocity: float = Query(0.0, ge=0.0, description="Minimum daily sale velocity"),
+    limit: int = Query(50, ge=1, le=200, description="Maximum number of results"),
+    sort_by: str = Query("weekly_gil_earned", description="Sort field"),
+    item_search: str = Query("", description="Comma-separated item name substrings"),
+    item_category: str = Query("", description="Item category substring filter"),
+    stats_within_days: int = Query(0, ge=0, description="Limit sale stats to last N days"),
+) -> JSONResponse:
+    """Market scan endpoint — returns non-craftable tradeable items ranked by market activity."""
+    try:
+        result = await analyze_market_scan(
+            world=world,
+            min_price=min_price,
+            min_velocity=min_velocity,
+            limit=limit,
+            sort_by=sort_by,
+            item_search=item_search,
+            item_category=item_category,
+            stats_within_days=stats_within_days,
+        )
+        return JSONResponse(content=result)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.get("/api/analyze/market-scan/stream")
+async def market_scan_stream_endpoint(
+    world: str = Query(...),
+    min_price: int = Query(0, ge=0),
+    min_velocity: float = Query(0.0, ge=0.0),
+    limit: int = Query(50, ge=1, le=200),
+    sort_by: str = Query("weekly_gil_earned"),
+    item_search: str = Query(""),
+    item_category: str = Query(""),
+    stats_within_days: int = Query(0, ge=0),
+):
+    """SSE endpoint that streams market scan progress then the final result."""
+    queue: asyncio.Queue = asyncio.Queue()
+
+    async def run():
+        async def on_progress(pct: int, msg: str) -> None:
+            await queue.put({"type": "progress", "pct": pct, "msg": msg})
+
+        try:
+            result = await analyze_market_scan(
+                world=world,
+                min_price=min_price,
+                min_velocity=min_velocity,
+                limit=limit,
+                sort_by=sort_by,
                 item_search=item_search,
                 item_category=item_category,
                 stats_within_days=stats_within_days,

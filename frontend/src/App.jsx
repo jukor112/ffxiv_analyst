@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
-import { apiFetch, analyzeStream } from "./utils/api";
-import { STRING_COLS } from "./utils/format";
+import { apiFetch, analyzeStream, marketScanStream } from "./utils/api";
+import { STRING_COLS, SCAN_STRING_COLS } from "./utils/format";
 import Header from "./components/Header";
 import Controls from "./components/Controls";
 import StatusBar from "./components/StatusBar";
@@ -19,6 +19,7 @@ export default function App() {
     const [status, setStatus] = useState(null);
     const [results, setResults] = useState([]);
     const [meta, setMeta] = useState(null);
+    const [mode, setMode] = useState("crafting"); // "crafting" | "scan"
     const [sortField, setSortField] = useState("profit");
     const [sortAsc, setSortAsc] = useState(false);
     const [expandedIds, setExpandedIds] = useState(new Set());
@@ -50,8 +51,10 @@ export default function App() {
         itemCategory,
         statsWithinDays,
     }) {
+        handleClear();
         setLoading(true);
         setHasRun(true);
+        setMode("crafting");
         setProgress(0);
         setProgressMsg("");
         setStatus({ type: "loading", msg: `Fetching data for ${world}…` });
@@ -123,7 +126,75 @@ export default function App() {
         }
     }
 
+    async function handleScan({
+        world,
+        sortBy,
+        minPrice,
+        minVelocity,
+        limit,
+        itemSearch,
+        itemCategory,
+        statsWithinDays,
+    }) {
+        
+        handleClear();
+        setLoading(true);
+        setHasRun(true);
+        setMode("scan");
+        setProgress(0);
+        setProgressMsg("");
+        setStatus({ type: "loading", msg: `Scanning market for ${world}…` });
+        try {
+            const params = new URLSearchParams({
+                world,
+                sort_by: sortBy,
+                min_price: minPrice,
+                min_velocity: minVelocity,
+                limit,
+                item_search: itemSearch,
+                item_category: itemCategory,
+                stats_within_days: statsWithinDays,
+            });
+            const result = await marketScanStream(params, (pct, msg) => {
+                setProgress(pct);
+                setProgressMsg(msg);
+            });
+            if (result.error) {
+                setStatus({ type: "err", msg: `Error: ${result.error}` });
+                return;
+            }
+            const items = result.items || [];
+            setResults(items);
+            setSortField(sortBy);
+            setSortAsc(false);
+            setExpandedIds(new Set());
+            setMeta({
+                world: result.world,
+                shown: items.length,
+                total: result.total,
+                scanPool: result.scan_pool,
+                mode: "scan",
+            });
+            if (items.length === 0) {
+                setStatus({ type: "err", msg: "No items found. Try lowering Min Price or Min Sales/Day." });
+            } else {
+                setStatus({
+                    type: "ok",
+                    msg: `Scan complete — ${result.total} items found from ${(result.scan_pool ?? 0).toLocaleString()} scanned.`,
+                });
+            }
+            loadCacheStatus();
+        } catch (e) {
+            setStatus({ type: "err", msg: `Request failed: ${e.message}` });
+        } finally {
+            setLoading(false);
+            setProgress(0);
+            setProgressMsg("");
+        }
+    }
+
     function handleSort(col) {
+        const stringCols = mode === "scan" ? SCAN_STRING_COLS : STRING_COLS;
         const newAsc = col === sortField ? !sortAsc : false;
         setSortAsc(newAsc);
         setSortField(col);
@@ -131,7 +202,7 @@ export default function App() {
             [...prev].sort((a, b) => {
                 const va = a[col],
                     vb = b[col];
-                if (STRING_COLS.has(col)) {
+                if (stringCols.has(col)) {
                     const cmp = String(va).localeCompare(String(vb));
                     return newAsc ? cmp : -cmp;
                 }
@@ -161,7 +232,13 @@ export default function App() {
         <>
             <Header />
             <div className="max-w-[1380px] mx-auto px-5 py-5 pb-10">
-                <Controls worlds={worlds} cacheInfo={cacheInfo} onAnalyze={handleAnalyze} loading={loading} />
+                <Controls
+                    worlds={worlds}
+                    cacheInfo={cacheInfo}
+                    onAnalyze={handleAnalyze}
+                    onScan={handleScan}
+                    loading={loading}
+                />
 
                 <StatusBar status={status} />
                 <ProgressBar loading={loading} progress={progress} message={progressMsg} />
@@ -171,12 +248,30 @@ export default function App() {
                     <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-border flex-wrap">
                         <p className="text-[12px] text-muted-foreground">
                             {meta ? (
-                                <>
-                                    Showing <span className="text-primary font-semibold">{meta.shown}</span> of{" "}
-                                    <span className="text-primary font-semibold">{meta.total}</span> profitable recipes
-                                    on <span className="text-primary font-semibold">{meta.world}</span> · Job:{" "}
-                                    <span className="text-primary font-semibold">{meta.job}</span>
-                                </>
+                                meta.mode === "scan" ? (
+                                    <>
+                                        Showing <span className="text-primary font-semibold">{meta.shown}</span> of{" "}
+                                        <span className="text-primary font-semibold">{meta.total}</span> items on{" "}
+                                        <span className="text-primary font-semibold">{meta.world}</span>
+                                        {meta.scanPool ? (
+                                            <>
+                                                {" "}
+                                                · Scanned{" "}
+                                                <span className="text-primary font-semibold">
+                                                    {meta.scanPool.toLocaleString()}
+                                                </span>{" "}
+                                                items
+                                            </>
+                                        ) : null}
+                                    </>
+                                ) : (
+                                    <>
+                                        Showing <span className="text-primary font-semibold">{meta.shown}</span> of{" "}
+                                        <span className="text-primary font-semibold">{meta.total}</span> profitable
+                                        recipes on <span className="text-primary font-semibold">{meta.world}</span> ·
+                                        Job: <span className="text-primary font-semibold">{meta.job}</span>
+                                    </>
+                                )
                             ) : (
                                 "No results yet — run an analysis to begin."
                             )}
@@ -200,6 +295,7 @@ export default function App() {
                             expandedIds={expandedIds}
                             onSort={handleSort}
                             onToggle={handleToggle}
+                            mode={mode}
                         />
                     ) : (
                         !loading && <EmptyState hasRun={hasRun} />
