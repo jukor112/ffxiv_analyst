@@ -1,7 +1,12 @@
+function formatAge(age_hours) {
+    if (age_hours >= 24) return `${(age_hours / 24).toFixed(1)}d`;
+    return `${age_hours}h`;
+}
+
 export default function CacheRow({ info }) {
     if (!info) return <p className="text-[11px] text-muted-foreground mt-1.5">Checking cache…</p>;
 
-    const { exists, stale, age_hours, count } = info;
+    const { exists, stale, age_hours, count, game_version } = info;
 
     if (!exists) {
         return (
@@ -15,11 +20,12 @@ export default function CacheRow({ info }) {
         <p className="text-[11px] text-muted-foreground mt-1.5">
             {stale ? (
                 <>
-                    ⚠️ Cache stale ({age_hours}h) — {count} recipes
+                    ⚠️ Cache stale ({formatAge(age_hours)}) — {count} recipes
                 </>
             ) : (
                 <>
-                    ✔ Cache valid ({age_hours}h old, {count} recipes)
+                    ✔ Cache valid ({formatAge(age_hours)} old, {count} recipes
+                    {game_version ? `, patch ${game_version}` : ""})
                 </>
             )}
         </p>

@@ -36,7 +36,8 @@ def _seed_tmp_cache() -> None:
 
 
 _seed_tmp_cache()
-RECIPE_CACHE_TTL = 86400  # 24 hours
+RECIPE_CACHE_TTL = 86_400 * 7   # 7 days — time-based fallback when game version unavailable
+RECIPE_CACHE_HARD_TTL = 86_400 * 30  # 30-day absolute cap
 RECIPE_CACHE_KEY = "recipes_v5"  # v5 = actually fetch ingredient PriceMid (NPC shop price)
 GATHERING_CACHE_KEY = "gathering_v1"
 
@@ -116,23 +117,42 @@ def _cache_path(key: str) -> Path:
     return CACHE_DIR / f"{key}.json"
 
 
-def _load_cache(key: str):
+def _load_cache_raw(key: str) -> Optional[dict]:
+    """Load full cache envelope; returns None if missing or past the hard TTL."""
     path = _cache_path(key)
     if not path.exists():
         return None
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-        if time.time() - data.get("timestamp", 0) > RECIPE_CACHE_TTL:
+        if time.time() - data.get("timestamp", 0) > RECIPE_CACHE_HARD_TTL:
             return None
-        return data.get("payload")
+        return data
     except Exception:
         return None
 
 
-def _save_cache(key: str, payload) -> None:
+def _load_cache(key: str):
+    """Return cached payload if within the time-based TTL, else None."""
+    raw = _load_cache_raw(key)
+    if raw is None:
+        return None
+    if time.time() - raw.get("timestamp", 0) > RECIPE_CACHE_TTL:
+        return None
+    return raw.get("payload")
+
+
+def _save_cache(key: str, payload, game_version: str = "", max_row_id: int = 0) -> None:
     path = _cache_path(key)
     path.write_text(
-        json.dumps({"timestamp": time.time(), "payload": payload}, ensure_ascii=False),
+        json.dumps(
+            {
+                "timestamp": time.time(),
+                "payload": payload,
+                "game_version": game_version,
+                "max_row_id": max_row_id,
+            },
+            ensure_ascii=False,
+        ),
         encoding="utf-8",
     )
 
@@ -146,7 +166,13 @@ def get_cache_info() -> dict:
         age_hours = (time.time() - data.get("timestamp", 0)) / 3600
         count = len(data.get("payload", []))
         stale = age_hours > (RECIPE_CACHE_TTL / 3600)
-        return {"exists": True, "age_hours": round(age_hours, 1), "count": count, "stale": stale}
+        return {
+            "exists": True,
+            "age_hours": round(age_hours, 1),
+            "count": count,
+            "stale": stale,
+            "game_version": data.get("game_version", ""),
+        }
     except Exception:
         return {"exists": False, "age_hours": None, "count": 0}
 
@@ -158,8 +184,31 @@ def clear_recipe_cache() -> None:
 
 
 # ---------------------------------------------------------------------------
-# XIVAPI — Recipe fetching
+# XIVAPI — Game version & Recipe fetching
 # ---------------------------------------------------------------------------
+
+
+async def _fetch_game_version(client: httpx.AsyncClient) -> str:
+    """Return the current FFXIV game version string from XIVAPI v2 beta.
+
+    Looks for the entry tagged "latest" in the /version list, e.g. "7.45".
+    Returns an empty string on any failure so callers can fall back gracefully.
+    """
+    try:
+        resp = await client.get(f"{XIVAPI_V2_BASE}/version", timeout=10)
+        resp.raise_for_status()
+        versions = resp.json().get("versions", [])
+        for entry in reversed(versions):
+            names = entry.get("names", [])
+            if "latest" in names:
+                # Return the first non-"latest" name, stripping hotfix suffixes
+                # e.g. "7.45x2" → "7.45", "7.1" → "7.1"
+                non_meta = [n for n in names if n != "latest"]
+                raw = non_meta[0] if non_meta else names[0]
+                return raw.split("x")[0]
+    except Exception:
+        pass
+    return ""
 
 
 async def _fetch_recipe_page_v2(client: httpx.AsyncClient, after: int) -> list[dict]:
@@ -175,27 +224,47 @@ async def _fetch_recipe_page_v2(client: httpx.AsyncClient, after: int) -> list[d
 
 
 async def fetch_all_recipes() -> list[dict]:
-    """Return all FFXIV crafting recipes, cached for 24 hours.
+    """Return all FFXIV crafting recipes using patch-based cache invalidation.
 
-    Uses XIVAPI v2 (beta.xivapi.com) which is kept up-to-date with all
-    game patches, including the latest Dawntrail content.
+    Cache strategy:
+    - Same game version  → serve cache regardless of age (up to 30-day hard limit).
+    - Version unavailable → fall back to 7-day time-based TTL.
+    - Dynamic pagination ceiling: derived from the highest row ID seen on the last
+      run plus a 2 000-row buffer, so new-patch recipes are captured without
+      wasting requests on thousands of guaranteed-empty pages.
     """
-    cached = _load_cache(RECIPE_CACHE_KEY)
-    if cached is not None:
-        return cached
-
-    semaphore = asyncio.Semaphore(XIVAPI_CONCURRENCY)
-
-    # Recipe row IDs in XIVAPI v2 are sequential integers. after=N returns
-    # rows with row_id > N.  We issue concurrent requests for all expected
-    # ranges; pages past the real max simply return [] and are ignored.
-    after_values = list(range(0, _V2_MAX_AFTER, _V2_PAGE_SIZE))
-
-    async def _fetch_with_sem(client: httpx.AsyncClient, after: int) -> list[dict]:
-        async with semaphore:
-            return await _fetch_recipe_page_v2(client, after)
+    raw_cache = _load_cache_raw(RECIPE_CACHE_KEY)
 
     async with httpx.AsyncClient() as client:
+        game_version = await _fetch_game_version(client)
+
+        if raw_cache is not None:
+            cached_version = raw_cache.get("game_version", "")
+            age = time.time() - raw_cache.get("timestamp", 0)
+
+            # Patch-stable: same known version → cache is authoritative
+            if game_version and cached_version and game_version == cached_version:
+                return raw_cache["payload"]
+
+            # Version unavailable: fall back to time-based TTL
+            if not game_version and age <= RECIPE_CACHE_TTL:
+                return raw_cache["payload"]
+
+        # Determine dynamic pagination ceiling
+        max_after = _V2_MAX_AFTER
+        if raw_cache:
+            stored_max_row_id = raw_cache.get("max_row_id", 0)
+            if stored_max_row_id > 0:
+                # 2 000-row buffer comfortably covers any recipes added in a patch
+                max_after = stored_max_row_id + 2000
+
+        semaphore = asyncio.Semaphore(XIVAPI_CONCURRENCY)
+        after_values = list(range(0, max_after, _V2_PAGE_SIZE))
+
+        async def _fetch_with_sem(c: httpx.AsyncClient, after: int) -> list[dict]:
+            async with semaphore:
+                return await _fetch_recipe_page_v2(c, after)
+
         tasks = [_fetch_with_sem(client, after) for after in after_values]
         pages = await asyncio.gather(*tasks)
 
@@ -203,7 +272,8 @@ async def fetch_all_recipes() -> list[dict]:
     for page_rows in pages:
         all_rows.extend(page_rows)
 
-    _save_cache(RECIPE_CACHE_KEY, all_rows)
+    max_row_id = max((row.get("row_id", 0) for row in all_rows), default=0)
+    _save_cache(RECIPE_CACHE_KEY, all_rows, game_version=game_version, max_row_id=max_row_id)
     return all_rows
 
 
@@ -220,14 +290,26 @@ async def _fetch_gathering_page_v2(client: httpx.AsyncClient, after: int) -> lis
 
 
 async def fetch_gatherable_ids() -> set[int]:
-    """Return a set of item IDs that can be gathered (Mining/Botany/Fishing), cached for 24 hours."""
-    cached = _load_cache(GATHERING_CACHE_KEY)
-    if cached is not None:
-        return set(cached)
+    """Return a set of item IDs that can be gathered (Mining/Botany/Fishing).
 
-    after_values = list(range(0, _V2_GATHERING_MAX_AFTER, _V2_GATHERING_PAGE_SIZE))
+    Uses the same patch-based invalidation strategy as fetch_all_recipes.
+    """
+    raw_cache = _load_cache_raw(GATHERING_CACHE_KEY)
 
     async with httpx.AsyncClient() as client:
+        game_version = await _fetch_game_version(client)
+
+        if raw_cache is not None:
+            cached_version = raw_cache.get("game_version", "")
+            age = time.time() - raw_cache.get("timestamp", 0)
+
+            if game_version and cached_version and game_version == cached_version:
+                return set(raw_cache["payload"])
+
+            if not game_version and age <= RECIPE_CACHE_TTL:
+                return set(raw_cache["payload"])
+
+        after_values = list(range(0, _V2_GATHERING_MAX_AFTER, _V2_GATHERING_PAGE_SIZE))
         tasks = [_fetch_gathering_page_v2(client, after) for after in after_values]
         pages = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -242,7 +324,7 @@ async def fetch_gatherable_ids() -> set[int]:
             if item_id and item_id > 0:
                 item_ids.append(item_id)
 
-    _save_cache(GATHERING_CACHE_KEY, item_ids)
+    _save_cache(GATHERING_CACHE_KEY, item_ids, game_version=game_version)
     return set(item_ids)
 
 

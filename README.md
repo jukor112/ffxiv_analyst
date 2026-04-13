@@ -14,7 +14,7 @@ A crafting profitability tool for Final Fantasy XIV. Enter your server and filte
 - **Ingredient source badges** — each ingredient is tagged as `Market`, `Craft`, `Gather`, or `NPC` automatically
 - **Flexible filtering** — filter by job, level range, min profit, min daily sales, item name, and item category
 - **Sort by anything** — profit, margin, weekly gil earned, weekly quantity sold, revenue, cost, or level
-- **Stale cache indicator** — shows recipe cache age and warns when it is older than 24 hours
+- **Stale cache indicator** — shows cache age (in hours or days), current patch version, and warns when cache is stale
 - **Deployable to Vercel** — serverless Python backend + static frontend with zero extra infrastructure
 
 ---
@@ -22,24 +22,26 @@ A crafting profitability tool for Final Fantasy XIV. Enter your server and filte
 ## Tech Stack
 
 ### Backend
-| Component | Technology |
-|---|---|
-| Language | Python 3.10+ |
-| Framework | FastAPI |
-| ASGI server | Uvicorn |
-| HTTP client | httpx (async) |
+
+| Component     | Technology                |
+| ------------- | ------------------------- |
+| Language      | Python 3.10+              |
+| Framework     | FastAPI                   |
+| ASGI server   | Uvicorn                   |
+| HTTP client   | httpx (async)             |
 | External APIs | XIVAPI v2, Universalis v2 |
 
 ### Frontend
-| Component | Technology |
-|---|---|
-| Language | JavaScript (ESM) |
-| UI framework | React 18 |
-| Build tool | Vite 6 |
-| Styling | Tailwind CSS 3 |
-| Icons | lucide-react |
-| Component primitives | Radix UI |
-| Analytics | @vercel/analytics |
+
+| Component            | Technology        |
+| -------------------- | ----------------- |
+| Language             | JavaScript (ESM)  |
+| UI framework         | React 18          |
+| Build tool           | Vite 6            |
+| Styling              | Tailwind CSS 3    |
+| Icons                | lucide-react      |
+| Component primitives | Radix UI          |
+| Analytics            | @vercel/analytics |
 
 ---
 
@@ -98,10 +100,10 @@ ffxiv_analyst/
 ### Prerequisites
 
 | Requirement | Version |
-|---|---|
-| Python | 3.10+ |
-| Node.js | 18+ |
-| npm | 8+ |
+| ----------- | ------- |
+| Python      | 3.10+   |
+| Node.js     | 18+     |
+| npm         | 8+      |
 
 No API keys, accounts, or databases are required. Both XIVAPI and Universalis are public, unauthenticated APIs.
 
@@ -114,6 +116,7 @@ run_dev.bat
 ```
 
 This script:
+
 1. Installs Node dependencies if `node_modules` is missing
 2. Starts FastAPI on `http://127.0.0.1:8000` in a background window
 3. Starts the Vite dev server on `http://127.0.0.1:5173`
@@ -129,6 +132,7 @@ run.bat
 ```
 
 This script:
+
 1. Validates Python 3.10+ and Node 18+ are available
 2. Installs Python dependencies from `requirements.txt`
 3. Builds the React frontend (`npm run build` → outputs to `static/`)
@@ -177,6 +181,7 @@ All routes are prefixed with `/api`.
 Returns the full datacenter → world hierarchy used to populate the world selector.
 
 **Response**
+
 ```json
 {
   "North America": {
@@ -196,6 +201,7 @@ Returns the full datacenter → world hierarchy used to populate the world selec
 Returns the list of supported crafting job abbreviations.
 
 **Response**
+
 ```json
 ["CRP", "BSM", "ARM", "GSM", "LTW", "WVR", "ALC", "CUL"]
 ```
@@ -207,14 +213,18 @@ Returns the list of supported crafting job abbreviations.
 Returns the current state of the local recipe cache.
 
 **Response**
+
 ```json
 {
-  "exists": true,
-  "age_hours": 3.2,
-  "count": 38142,
-  "stale": false
+    "exists": true,
+    "age_hours": 3.2,
+    "count": 38142,
+    "stale": false,
+    "game_version": "7.45"
 }
 ```
+
+`game_version` is the FFXIV patch version the cache was built against (empty string if unavailable).
 
 ---
 
@@ -229,11 +239,13 @@ Runs a full analysis and returns the complete result as a single JSON response. 
 Runs a full analysis and streams progress via **Server-Sent Events (SSE)**. This is the endpoint used by the UI.
 
 **Progress event** (emitted throughout the analysis):
+
 ```json
 { "type": "progress", "pct": 47, "msg": "Fetching market data…" }
 ```
 
 **Done event** (emitted once at the end):
+
 ```json
 {
   "type": "done",
@@ -245,6 +257,7 @@ Runs a full analysis and streams progress via **Server-Sent Events (SSE)**. This
 ```
 
 **Error event** (emitted if analysis fails):
+
 ```json
 { "type": "error", "msg": "Universalis returned 503" }
 ```
@@ -253,37 +266,37 @@ Runs a full analysis and streams progress via **Server-Sent Events (SSE)**. This
 
 ### Query Parameters (for `/api/analyze` and `/api/analyze/stream`)
 
-| Parameter | Type | Default | Description |
-|---|---|---|---|
-| `world` | string | **required** | World or datacenter name (e.g. `Gilgamesh`, `Crystal`) |
-| `job` | string | `ALL` | Job abbreviation (`CRP`, `BSM`, …) or `ALL` |
-| `min_profit` | int | `0` | Minimum profit per craft in gil |
-| `min_velocity` | float | `0.0` | Minimum combined NQ+HQ daily sale velocity |
-| `limit` | int | `50` | Max results returned (1–200) |
-| `sort_by` | string | `profit` | Sort field — see table below |
-| `min_level` | int | `0` | Minimum recipe level (0 = no filter) |
-| `max_level` | int | `0` | Maximum recipe level (0 = no filter) |
-| `item_search` | string | `""` | Comma-separated item name substrings (OR logic, case-insensitive) |
-| `item_category` | string | `""` | Comma-separated item category substrings (OR logic) |
-| `stats_within_days` | int | `0` | Restrict Universalis sale history to last N days (0 = use all) |
+| Parameter           | Type   | Default      | Description                                                       |
+| ------------------- | ------ | ------------ | ----------------------------------------------------------------- |
+| `world`             | string | **required** | World or datacenter name (e.g. `Gilgamesh`, `Crystal`)            |
+| `job`               | string | `ALL`        | Job abbreviation (`CRP`, `BSM`, …) or `ALL`                       |
+| `min_profit`        | int    | `0`          | Minimum profit per craft in gil                                   |
+| `min_velocity`      | float  | `0.0`        | Minimum combined NQ+HQ daily sale velocity                        |
+| `limit`             | int    | `50`         | Max results returned (1–200)                                      |
+| `sort_by`           | string | `profit`     | Sort field — see table below                                      |
+| `min_level`         | int    | `0`          | Minimum recipe level (0 = no filter)                              |
+| `max_level`         | int    | `0`          | Maximum recipe level (0 = no filter)                              |
+| `item_search`       | string | `""`         | Comma-separated item name substrings (OR logic, case-insensitive) |
+| `item_category`     | string | `""`         | Comma-separated item category substrings (OR logic)               |
+| `stats_within_days` | int    | `0`          | Restrict Universalis sale history to last N days (0 = use all)    |
 
 **`sort_by` values**
 
-| Value | Description |
-|---|---|
-| `profit` | Profit per craft (sell price × yield − ingredient cost) |
-| `margin` | Profit as a percentage of sell price |
-| `weekly_gil_earned` | Total gil earned in the last 7 days |
-| `weekly_qty_sold` | Units sold in the last 7 days |
-| `revenue` | Raw sell price × yield |
-| `cost` | Total ingredient cost |
-| `level` | Recipe level |
+| Value               | Description                                             |
+| ------------------- | ------------------------------------------------------- |
+| `profit`            | Profit per craft (sell price × yield − ingredient cost) |
+| `margin`            | Profit as a percentage of sell price                    |
+| `weekly_gil_earned` | Total gil earned in the last 7 days                     |
+| `weekly_qty_sold`   | Units sold in the last 7 days                           |
+| `revenue`           | Raw sell price × yield                                  |
+| `cost`              | Total ingredient cost                                   |
+| `level`             | Recipe level                                            |
 
 ---
 
 ## How the Analysis Works
 
-1. **Load recipes** — `fetch_all_recipes()` pulls all recipes from XIVAPI v2 using concurrent paginated requests (up to 100 pages × 500 results). Results are cached for 24 hours.
+1. **Load recipes** — `fetch_all_recipes()` pulls all recipes from XIVAPI v2 using concurrent paginated requests. Results are cached using patch-based invalidation (served indefinitely for the same game version, with a 7-day time-based fallback and a 30-day absolute cap). The pagination ceiling is derived dynamically from the highest row ID seen previously, reducing wasted requests after a patch.
 2. **Filter** — recipes are filtered by job, level, item name, and item category before any market data is fetched.
 3. **Collect item IDs** — all unique ingredient and output item IDs are gathered from the filtered recipe set.
 4. **Fetch market data** — `fetch_market_data()` batches item IDs into chunks of 100 and queries Universalis concurrently using an asyncio semaphore (8 simultaneous requests). Retries automatically on 429/503 responses.
@@ -297,17 +310,33 @@ Runs a full analysis and streams progress via **Server-Sent Events (SSE)**. This
 
 ### Local / Production
 
-Recipe and gathering data is cached in `cache/` as JSON files with a 24-hour TTL:
+Recipe and gathering data is cached in `cache/` as JSON files:
 
-| File | Contents |
-|---|---|
-| `cache/recipes_v5.json` | All FFXIV crafting recipes including NPC price data |
+| File                      | Contents                                                |
+| ------------------------- | ------------------------------------------------------- |
+| `cache/recipes_v5.json`   | All FFXIV crafting recipes including NPC price data     |
 | `cache/gathering_v1.json` | Set of gatherable item IDs for ingredient source badges |
 
 Cache format:
+
 ```json
-{ "timestamp": 1712345678.0, "payload": { ... } }
+{
+  "timestamp": 1712345678.0,
+  "payload": { ... },
+  "game_version": "7.45",
+  "max_row_id": 39210
+}
 ```
+
+**Cache invalidation strategy:**
+
+| Condition                   | Behaviour                           |
+| --------------------------- | ----------------------------------- |
+| Same game version as cached | Serve cache (up to 30-day hard cap) |
+| Game version unavailable    | Serve cache if younger than 7 days  |
+| Game version changed        | Refetch from XIVAPI                 |
+
+`max_row_id` is the highest recipe row ID seen in the last fetch. On the next fetch it becomes the pagination ceiling (+ 2 000-row buffer), so new-patch recipes are captured without scanning thousands of empty pages.
 
 ### Vercel (Serverless)
 
@@ -323,22 +352,24 @@ The project is pre-configured for Vercel via `vercel.json`:
 
 ```json
 {
-  "buildCommand": "cd frontend && npm install && npm run build",
-  "outputDirectory": "static",
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.py" },
-    { "source": "/(.*)", "destination": "/$1" }
-  ]
+    "buildCommand": "cd frontend && npm install && npm run build",
+    "outputDirectory": "static",
+    "rewrites": [
+        { "source": "/api/(.*)", "destination": "/api/index.py" },
+        { "source": "/(.*)", "destination": "/$1" }
+    ]
 }
 ```
 
 **How it works:**
+
 1. Vercel runs the build command, compiling the React frontend into `static/`
 2. Static files are served directly from `static/` (assets get `max-age=31536000, immutable` headers; HTML gets `no-cache`)
 3. All `/api/*` requests are routed to the Python serverless function at `api/index.py`
 4. `api/index.py` re-exports the FastAPI `app` object, which Vercel's Python runtime serves
 
 **Deploy with the Vercel CLI:**
+
 ```bash
 npm install -g vercel
 vercel
@@ -348,8 +379,8 @@ vercel
 
 ### Environment Variables
 
-| Variable | Required | Description |
-|---|---|---|
+| Variable | Required               | Description                               |
+| -------- | ---------------------- | ----------------------------------------- |
 | `VERCEL` | Vercel only (auto-set) | Switches cache directory to `/tmp/cache/` |
 
 No other environment variables or secrets are needed.
@@ -367,6 +398,7 @@ No other environment variables or secrets are needed.
 ### Updating the Recipe Cache Schema
 
 Cache files are versioned by key (e.g. `recipes_v5`). To change the schema:
+
 1. Bump the version constant `RECIPE_CACHE_KEY` in `analyzer.py` (e.g. `recipes_v6`)
 2. Delete the old cache file from `cache/`
 3. Run the app once locally to regenerate — the new file will be created automatically
@@ -379,10 +411,10 @@ The Vite build injects `__APP_VERSION__` from `frontend/package.json` at build t
 
 ## External APIs Used
 
-| API | Base URL | Usage |
-|---|---|---|
-| XIVAPI v2 | `https://beta.xivapi.com/api/1` | Recipe data, item names, NPC shop prices, gathering item IDs |
-| Universalis v2 | `https://universalis.app/api/v2` | Live marketboard prices and sale history |
+| API            | Base URL                         | Usage                                                        |
+| -------------- | -------------------------------- | ------------------------------------------------------------ |
+| XIVAPI v2      | `https://beta.xivapi.com/api/1`  | Recipe data, item names, NPC shop prices, gathering item IDs |
+| Universalis v2 | `https://universalis.app/api/v2` | Live marketboard prices and sale history                     |
 
 Both APIs are public and require no authentication or API keys.
 
