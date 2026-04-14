@@ -102,7 +102,7 @@ export default function MarketScanRow({ r, idx }) {
 
             {/* Source */}
             <td className={tdCls}>
-                <div className="flex flex-col gap-0.5">
+                <div className="flex flex-col gap-0.5 items-center">
                     <span className={SOURCE_BADGE_CLASS} style={sourceStyle}>
                         {sourceLabel}
                     </span>
@@ -132,6 +132,11 @@ export default function MarketScanRow({ r, idx }) {
             {/* Last Sold */}
             <td className={tdCls}>
                 <span className="text-[12px] text-muted-foreground">{timeAgo(r.last_sold)}</span>
+            </td>
+
+            {/* Listings */}
+            <td className={tdCls}>
+                <span className="text-[12px] text-muted-foreground">{r.listing_count ?? 0}</span>
             </td>
         </tr>
     );

@@ -305,12 +305,17 @@ export default function ResultRow({ r, idx, expanded, onToggle }) {
                 <td className={tdCls}>
                     <span className="text-[12px] text-muted-foreground">{timeAgo(r.last_sold)}</span>
                 </td>
+
+                {/* Listings */}
+                <td className={tdCls}>
+                    <span className="text-[12px] text-muted-foreground">{r.listing_count ?? 0}</span>
+                </td>
             </tr>
 
             {expanded && (
                 <tr>
                     <td
-                        colSpan={12}
+                        colSpan={13}
                         className="bg-[#080818] p-0 border-b border-border"
                         onClick={(e) => e.stopPropagation()}
                     >

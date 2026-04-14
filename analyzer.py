@@ -409,7 +409,7 @@ async def _fetch_market_chunk(
     needed = [
         "minPriceNQ", "currentAveragePriceNQ", "averagePriceNQ", "minPrice",
         "minPriceHQ", "currentAveragePriceHQ", "averagePriceHQ",
-        "nqSaleVelocity", "hqSaleVelocity", "recentHistory",
+        "nqSaleVelocity", "hqSaleVelocity", "recentHistory", "listingsCount",
     ]
     fields = ",".join(f"{prefix}{f}" for f in needed)
     # entries=500: enough history to cover a week for popular world-level items
@@ -773,6 +773,7 @@ async def analyze(
             "weekly_purchases": weekly_purchases,
             "weekly_gil_earned": weekly_gil_earned,
             "last_sold": last_sold,
+            "listing_count": int(sell_data.get("listingsCount") or 0),
             "ingredients": ingredients_detail,
         })
 
@@ -1022,6 +1023,7 @@ async def analyze_market_scan(
                 "weekly_qty_sold": weekly_qty_sold,
                 "weekly_gil_earned": weekly_gil_earned,
                 "last_sold": last_sold,
+                "listing_count": int(item_data.get("listingsCount") or 0),
             }
         )
 
@@ -1085,7 +1087,7 @@ async def analyze_market_scan(
                 "item_category": item_cat,
                 "source": source,
                 "source_detail": source_detail,
-                **{k: c[k] for k in ("sell_price", "velocity", "weekly_qty_sold", "weekly_gil_earned", "last_sold")},
+                **{k: c[k] for k in ("sell_price", "velocity", "weekly_qty_sold", "weekly_gil_earned", "last_sold", "listing_count")},
             }
         )
         if len(results) >= limit:

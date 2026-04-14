@@ -19,6 +19,7 @@ export const TABLE_COLS = [
     { key: "velocity", label: "Sales/Day" },
     { key: "weekly_qty_sold", label: "Qty Sold" },
     { key: "last_sold", label: "Last Sold" },
+    { key: "listing_count", label: "Listings" },
 ];
 
 export const SCAN_TABLE_COLS = [
@@ -30,6 +31,7 @@ export const SCAN_TABLE_COLS = [
     { key: "weekly_gil_earned", label: "Weekly Gil" },
     { key: "weekly_qty_sold", label: "Qty Sold" },
     { key: "last_sold", label: "Last Sold" },
+    { key: "listing_count", label: "Listings" },
 ];
 
 export function timeAgo(unixSeconds) {

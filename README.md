@@ -14,6 +14,7 @@ A crafting profitability tool for Final Fantasy XIV. Enter your server and filte
 - **Ingredient source badges** — each ingredient is tagged as `Market`, `Craft`, `Gather`, or `NPC` automatically
 - **Flexible filtering** — filter by job, level range, min profit, min daily sales, item name, and item category
 - **Sort by anything** — profit, margin, weekly gil earned, weekly quantity sold, revenue, cost, or level
+- **Active listing count** — both the crafts and drops tables show the current number of active marketboard listings for each item
 - **Market scan** — separate mode to find profitable non-craftable tradeable items (drops, special-shop purchases) ranked by weekly gil earned, daily velocity, or price
 - **Stale cache indicator** — shows cache age (in hours or days), current patch version, and warns when cache is stale
 - **Deployable to Vercel** — serverless Python backend + static frontend with zero extra infrastructure
@@ -34,16 +35,16 @@ A crafting profitability tool for Final Fantasy XIV. Enter your server and filte
 
 ### Frontend
 
-| Component            | Technology              |
-| -------------------- | ----------------------- |
-| Language             | JavaScript (ESM)        |
-| UI framework         | React 18                |
-| Build tool           | Vite 6                  |
-| Styling              | Tailwind CSS 3          |
-| Icons                | lucide-react            |
-| Component primitives | Radix UI                |
-| Analytics            | @vercel/analytics       |
-| Performance          | @vercel/speed-insights  |
+| Component            | Technology             |
+| -------------------- | ---------------------- |
+| Language             | JavaScript (ESM)       |
+| UI framework         | React 18               |
+| Build tool           | Vite 6                 |
+| Styling              | Tailwind CSS 3         |
+| Icons                | lucide-react           |
+| Component primitives | Radix UI               |
+| Analytics            | @vercel/analytics      |
+| Performance          | @vercel/speed-insights |
 
 ---
 
@@ -308,6 +309,24 @@ Runs a market scan and streams progress via **SSE**. This is the endpoint used b
 | `item_category`     | string | `""`         | Comma-separated item category substrings (OR logic)               |
 | `stats_within_days` | int    | `0`          | Restrict Universalis sale history to last N days (0 = use all)    |
 
+**Result record fields (crafts)**
+
+| Field               | Description                                                |
+| ------------------- | ---------------------------------------------------------- |
+| `item_name`         | Item name                                                  |
+| `job`               | Crafting job abbreviation                                  |
+| `level`             | Recipe level                                               |
+| `cost`              | Total ingredient cost in gil                               |
+| `sell_price`        | Average sell price per unit (based on recent sale history) |
+| `profit`            | Profit per craft (sell price × yield − ingredient cost)    |
+| `margin`            | Profit as a percentage of sell price                       |
+| `weekly_gil_earned` | Total gil earned in the last 7 days                        |
+| `weekly_purchases`  | Number of individual purchases in the last 7 days          |
+| `velocity`          | Combined NQ+HQ daily sale velocity                         |
+| `weekly_qty_sold`   | Units sold in the last 7 days                              |
+| `last_sold`         | Unix timestamp of the most recent sale                     |
+| `listing_count`     | Number of active marketboard listings at query time        |
+
 **`sort_by` values**
 
 | Value               | Description                                             |
@@ -324,16 +343,30 @@ Runs a market scan and streams progress via **SSE**. This is the endpoint used b
 
 ### Query Parameters (for `/api/analyze/market-scan` and `/api/analyze/market-scan/stream`)
 
-| Parameter           | Type   | Default              | Description                                                       |
-| ------------------- | ------ | -------------------- | ----------------------------------------------------------------- |
-| `world`             | string | **required**         | World or datacenter name                                          |
-| `min_price`         | int    | `0`                  | Minimum list price in gil                                         |
-| `min_velocity`      | float  | `0.0`                | Minimum daily sale velocity                                       |
-| `limit`             | int    | `50`                 | Max results returned (1–200)                                      |
-| `sort_by`           | string | `weekly_gil_earned`  | Sort field: `weekly_gil_earned`, `weekly_qty_sold`, `velocity`, `current_price` |
-| `item_search`       | string | `""`                 | Comma-separated item name substrings (OR logic, case-insensitive) |
-| `item_category`     | string | `""`                 | Comma-separated item category substrings (OR logic)               |
-| `stats_within_days` | int    | `0`                  | Restrict sale history to last N days (0 = use all)                |
+| Parameter           | Type   | Default             | Description                                                                     |
+| ------------------- | ------ | ------------------- | ------------------------------------------------------------------------------- |
+| `world`             | string | **required**        | World or datacenter name                                                        |
+| `min_price`         | int    | `0`                 | Minimum list price in gil                                                       |
+| `min_velocity`      | float  | `0.0`               | Minimum daily sale velocity                                                     |
+| `limit`             | int    | `50`                | Max results returned (1–200)                                                    |
+| `sort_by`           | string | `weekly_gil_earned` | Sort field: `weekly_gil_earned`, `weekly_qty_sold`, `velocity`, `current_price` |
+| `item_search`       | string | `""`                | Comma-separated item name substrings (OR logic, case-insensitive)               |
+| `item_category`     | string | `""`                | Comma-separated item category substrings (OR logic)                             |
+| `stats_within_days` | int    | `0`                 | Restrict sale history to last N days (0 = use all)                              |
+
+**Result record fields (market scan)**
+
+| Field               | Description                                         |
+| ------------------- | --------------------------------------------------- |
+| `item_name`         | Item name                                           |
+| `item_category`     | Item UI category                                    |
+| `source`            | `drop` or `shop`                                    |
+| `sell_price`        | Current minimum list price in gil                   |
+| `velocity`          | Combined NQ+HQ daily sale velocity                  |
+| `weekly_gil_earned` | Total gil earned in the last 7 days                 |
+| `weekly_qty_sold`   | Units sold in the last 7 days                       |
+| `last_sold`         | Unix timestamp of the most recent sale              |
+| `listing_count`     | Number of active marketboard listings at query time |
 
 ---
 
@@ -342,7 +375,7 @@ Runs a market scan and streams progress via **SSE**. This is the endpoint used b
 1. **Load recipes** — `fetch_all_recipes()` pulls all recipes from XIVAPI v2 using concurrent paginated requests. Results are cached using patch-based invalidation (served indefinitely for the same game version, with a 7-day time-based fallback and a 30-day absolute cap). The pagination ceiling is derived dynamically from the highest row ID seen previously, reducing wasted requests after a patch.
 2. **Filter** — recipes are filtered by job, level, item name, and item category before any market data is fetched.
 3. **Collect item IDs** — all unique ingredient and output item IDs are gathered from the filtered recipe set.
-4. **Fetch market data** — `fetch_market_data()` batches item IDs into chunks of 100 and queries Universalis concurrently using an asyncio semaphore (8 simultaneous requests). Retries automatically on 429/503 responses.
+4. **Fetch market data** — `fetch_market_data()` batches item IDs into chunks of 100 and queries Universalis concurrently using an asyncio semaphore (8 simultaneous requests). Retries automatically on 429/503 responses. Fields fetched include listing floors, sale velocities, recent sale history, and `listingsCount` (active listing count).
 5. **Price selection** — for each item, the best price is selected by: current low listing → recent average → historical average. NPC shop prices (from XIVAPI `PriceMid`) are used as a ceiling to avoid over-paying for vendor-sold items.
 6. **Profit calculation** — `profit = (best_sell_price × yield) − Σ(ingredient_unit_price × amount)`. Margin, revenue, weekly stats, and daily velocity are also computed per recipe.
 7. **Deduplication & ranking** — when the same output item appears from multiple jobs, only the most profitable craft is kept. Results are sorted and truncated to `limit`.
@@ -355,13 +388,13 @@ Runs a market scan and streams progress via **SSE**. This is the endpoint used b
 
 Recipe and gathering data is cached in `cache/` as JSON files:
 
-| File                          | Contents                                                              | TTL                        |
-| ----------------------------- | --------------------------------------------------------------------- | -------------------------- |
-| `cache/recipes_v5.json`       | All FFXIV crafting recipes including NPC price data                   | Patch-based (30-day cap)   |
-| `cache/gathering_v1.json`     | Set of gatherable item IDs for ingredient source badges               | Patch-based (30-day cap)   |
-| `cache/special_shop_v2.json`  | Special-shop costs keyed by item ID (currency, cost, quantity)        | Bundled, refreshed manually |
-| `cache/item_names_v1.json`    | Persistent XIVAPI item name + category cache (grows incrementally)    | Never expires              |
-| `cache/marketable_v1.json`    | Full list of marketable item IDs from Universalis                     | 1 day                      |
+| File                         | Contents                                                           | TTL                         |
+| ---------------------------- | ------------------------------------------------------------------ | --------------------------- |
+| `cache/recipes_v5.json`      | All FFXIV crafting recipes including NPC price data                | Patch-based (30-day cap)    |
+| `cache/gathering_v1.json`    | Set of gatherable item IDs for ingredient source badges            | Patch-based (30-day cap)    |
+| `cache/special_shop_v2.json` | Special-shop costs keyed by item ID (currency, cost, quantity)     | Bundled, refreshed manually |
+| `cache/item_names_v1.json`   | Persistent XIVAPI item name + category cache (grows incrementally) | Never expires               |
+| `cache/marketable_v1.json`   | Full list of marketable item IDs from Universalis                  | 1 day                       |
 
 Cache format:
 
