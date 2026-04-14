@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/jukor112/ffxiv_analyst/compare/v1.2.0...v1.3.0) (2026-04-14)
+
+
+### Features
+
+* **market:** add active listing count column to crafts and drops tables ([09d0446](https://github.com/jukor112/ffxiv_analyst/commit/09d04463e670df14c467d205c14386f91c62bbd2))
+
 # [1.2.0](https://github.com/jukor112/ffxiv_analyst/compare/v1.1.0...v1.2.0) (2026-04-13)
 
 
