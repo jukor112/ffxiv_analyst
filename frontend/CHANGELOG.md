@@ -1,3 +1,10 @@
+## [1.3.1](https://github.com/jukor112/ffxiv_analyst/compare/v1.3.0...v1.3.1) (2026-04-16)
+
+
+### Bug Fixes
+
+* update minVelocity to 0 in scan presets and state initialization ([6983450](https://github.com/jukor112/ffxiv_analyst/commit/6983450eedf0e1137c5f49b2b0e970a39b82a979))
+
 # [1.3.0](https://github.com/jukor112/ffxiv_analyst/compare/v1.2.0...v1.3.0) (2026-04-14)
 
 
