@@ -220,7 +220,7 @@ const SCAN_PRESETS = [
         params: {
             sortBy: "weekly_gil_earned",
             minPrice: 0,
-            minVelocity: 1,
+            minVelocity: 0,
             itemSearch: "",
             categoryFilters: new Set(ALL_CATEGORIES),
             statsWithinDays: 7,
@@ -232,7 +232,7 @@ const SCAN_PRESETS = [
         params: {
             sortBy: "sell_price",
             minPrice: 100000,
-            minVelocity: 1,
+            minVelocity: 0,
             itemSearch: "",
             categoryFilters: new Set(ALL_CATEGORIES),
             statsWithinDays: 0,
@@ -256,7 +256,7 @@ const SCAN_PRESETS = [
         params: {
             sortBy: "weekly_gil_earned",
             minPrice: 0,
-            minVelocity: 1,
+            minVelocity: 0,
             itemSearch: "",
             categoryFilters: new Set(["Minion"]),
             statsWithinDays: 0,
@@ -268,7 +268,7 @@ const SCAN_PRESETS = [
         params: {
             sortBy: "sell_price",
             minPrice: 0,
-            minVelocity: 1,
+            minVelocity: 0,
             itemSearch: "",
             categoryFilters: new Set(["Triple Triad Card"]),
             statsWithinDays: 0,
@@ -309,7 +309,7 @@ export default function Controls({ worlds, cacheInfo, onAnalyze, onScan, loading
     // Scan state
     const [scanSortBy, setScanSortBy] = useState("weekly_gil_earned");
     const [scanMinPrice, setScanMinPrice] = useState(0);
-    const [scanMinVelocity, setScanMinVelocity] = useState(1);
+    const [scanMinVelocity, setScanMinVelocity] = useState(0);
     const [scanLimit, setScanLimit] = useState(50);
     const [scanItemSearch, setScanItemSearch] = useState("");
     const [scanCategoryFilters, setScanCategoryFilters] = useState(new Set(ALL_CATEGORIES));
