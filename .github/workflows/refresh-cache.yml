@@ -1,0 +1,42 @@
+name: Refresh Recipe Cache
+
+on:
+    schedule:
+        # Runs every Monday at 06:00 UTC — catches any patch released the prior week.
+        # FFXIV patches typically land on a Tuesday (JP time), so Monday catches the
+        # previous patch cycle and Tuesday catches same-day patches by next week.
+        - cron: "0 6 * * 1"
+    workflow_dispatch: # Allow manual trigger from GitHub Actions UI
+
+jobs:
+    refresh:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write # needed to commit updated cache files
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.11"
+
+            - name: Install dependencies
+              run: pip install httpx
+
+            - name: Refresh cache
+              run: python scripts/refresh_cache.py
+
+            - name: Commit updated cache files (if changed)
+              run: |
+                  git config user.name  "github-actions[bot]"
+                  git config user.email "github-actions[bot]@users.noreply.github.com"
+                  git add cache/recipes_v5.json cache/gathering_v1.json
+                  if git diff --staged --quiet; then
+                    echo "Cache is up-to-date (same game version) — nothing to commit."
+                  else
+                    git commit -m "chore: refresh recipe cache [skip ci]"
+                    git push
+                  fi

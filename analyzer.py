@@ -36,7 +36,7 @@ def _seed_tmp_cache() -> None:
 
 
 _seed_tmp_cache()
-RECIPE_CACHE_TTL = 86_400 * 7   # 7 days — time-based fallback when game version unavailable
+RECIPE_CACHE_TTL = 86_400 * 30  # 30 days — time-based fallback when game version unavailable
 RECIPE_CACHE_HARD_TTL = 86_400 * 30  # 30-day absolute cap
 RECIPE_CACHE_KEY = "recipes_v5"  # v5 = actually fetch ingredient PriceMid (NPC shop price)
 GATHERING_CACHE_KEY = "gathering_v1"
@@ -51,7 +51,7 @@ UNIVERSALIS_BASE = "https://universalis.app/api/v2"
 
 # Items where the 7-day avg sold price diverges more than this multiple from the
 # current listing floor are skipped as suspicious (price manipulation / stale data).
-MAX_PRICE_DIVERGENCE_RATIO = 5.0
+MAX_PRICE_DIVERGENCE_RATIO = 8.0
 
 JOBS: dict[str, int] = {
     "CRP": 8,
