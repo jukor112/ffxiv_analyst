@@ -23,13 +23,13 @@ const SOURCE_BADGE = {
     },
 };
 
-export default function IngredientPanel({ ingredients, excluded, onToggle, onReset }) {
+export default function IngredientPanel({ ingredients, excluded, onToggle, onReset, compact = false }) {
     const totalCost = ingredients.reduce((sum, ing) => sum + ing.total, 0);
     const adjustedCost = ingredients.reduce((sum, ing, i) => sum + (excluded.has(i) ? 0 : ing.total), 0);
     const saving = totalCost - adjustedCost;
 
     return (
-        <div className="px-4 py-3 pl-9">
+        <div className={compact ? "px-3 py-2.5" : "px-4 py-3 pl-9"}>
             <div className="flex items-center gap-3 mb-1">
                 <p className="text-[10px] uppercase tracking-[1px] text-primary font-bold">Ingredients</p>
                 <p className="text-[10px] text-muted-foreground">

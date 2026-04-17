@@ -50,4 +50,35 @@
         background: #191932;
         color: #e8e3d5;
     }
+
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: hsl(var(--muted));
+        border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: hsl(var(--secondary));
+        border-radius: 4px;
+        border: 1px solid hsl(var(--border));
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: hsl(var(--primary));
+    }
+
+    ::-webkit-scrollbar-corner {
+        background: hsl(var(--muted));
+    }
+
+    /* Firefox */
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: hsl(var(--secondary)) hsl(var(--muted));
+    }
 }

@@ -2,6 +2,7 @@
 import { ScanSearch, Filter, Hammer, TrendingUp } from "lucide-react";
 import CacheRow from "./CacheRow";
 import ItemFilterModal, { CATEGORY_GROUPS } from "./ItemFilterModal";
+import HelpModal from "./HelpModal";
 import { Button } from "./ui/button";
 import { Label } from "./ui/label";
 import { NativeSelect } from "./ui/native-select";
@@ -305,6 +306,7 @@ export default function Controls({ worlds, cacheInfo, onAnalyze, onScan, loading
     const [statsWithinDays, setStatsWithinDays] = useState(7);
     const [activePreset, setActivePreset] = useState(null);
     const [filterModalOpen, setFilterModalOpen] = useState(false);
+    const [helpOpen, setHelpOpen] = useState(false);
 
     // Scan state
     const [scanSortBy, setScanSortBy] = useState("weekly_gil_earned");
@@ -409,7 +411,7 @@ export default function Controls({ worlds, cacheInfo, onAnalyze, onScan, loading
             <Card className="mb-3.5">
                 <CardContent className="flex flex-col gap-4 pt-4">
                     {/* Mode tabs */}
-                    <div className="flex gap-1 border-b border-border pb-3">
+                    <div className="flex gap-1 border-b border-border pb-3 items-center">
                         <button
                             type="button"
                             onClick={() => setMode("crafting")}
@@ -433,6 +435,14 @@ export default function Controls({ worlds, cacheInfo, onAnalyze, onScan, loading
                         >
                             <TrendingUp size={13} />
                             Drops & Shop
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setHelpOpen(true)}
+                            title="How to use this tool"
+                            className="ml-auto flex items-center justify-center w-6 h-6 rounded-full border border-border text-muted-foreground hover:border-primary hover:text-primary transition-colors duration-150 cursor-pointer text-[11px] font-bold leading-none shrink-0"
+                        >
+                            ?
                         </button>
                     </div>
 
@@ -724,7 +734,7 @@ export default function Controls({ worlds, cacheInfo, onAnalyze, onScan, loading
                                 className="px-6"
                             >
                                 <ScanSearch size={14} className="mr-1.5" />
-                                Analyse Market
+                                Scan
                             </Button>
                         ) : (
                             <Button
@@ -733,8 +743,8 @@ export default function Controls({ worlds, cacheInfo, onAnalyze, onScan, loading
                                 onClick={handleScanClick}
                                 className="px-6"
                             >
-                                <TrendingUp size={14} className="mr-1.5" />
-                                Scan Drops & Shop
+                                <ScanSearch size={14} className="mr-1.5" />
+                                Scan
                             </Button>
                         )}
                         <CacheRow info={cacheInfo} />
@@ -756,6 +766,7 @@ export default function Controls({ worlds, cacheInfo, onAnalyze, onScan, loading
                     onClose={() => setScanFilterModalOpen(false)}
                 />
             )}
+            {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
         </>
     );
 }
