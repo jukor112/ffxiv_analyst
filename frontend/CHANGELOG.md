@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/jukor112/ffxiv_analyst/compare/v1.5.0...v1.6.0) (2026-04-17)
+
+
+### Features
+
+* add PWA support with update banner and service worker configuration ([bbb8021](https://github.com/jukor112/ffxiv_analyst/commit/bbb802130748e61fa081c554b21135cb03a5f84c))
+
 # [1.5.0](https://github.com/jukor112/ffxiv_analyst/compare/v1.4.0...v1.5.0) (2026-04-17)
 
 
