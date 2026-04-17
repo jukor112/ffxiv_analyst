@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/jukor112/ffxiv_analyst/compare/v1.3.1...v1.4.0) (2026-04-17)
+
+
+### Features
+
+* **cache:** extend recipe cache TTL to 30 days and increase max price divergence ratio ([8a9c37d](https://github.com/jukor112/ffxiv_analyst/commit/8a9c37d28a821743064656c9c0b424ce92629621))
+
 ## [1.3.1](https://github.com/jukor112/ffxiv_analyst/compare/v1.3.0...v1.3.1) (2026-04-16)
 
 
