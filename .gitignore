@@ -25,6 +25,11 @@ frontend/node_modules/
 
 # Build output
 static/assets/
+static/sw.js
+static/workbox-*.js
+static/manifest.webmanifest
+static/index.html
+static/favicon.svg
 frontend/dist/
 
 # Cache files — bundled seed files ARE committed; only runtime-written files are ignored

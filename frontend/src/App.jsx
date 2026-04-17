@@ -4,6 +4,7 @@ import { SpeedInsights } from "@vercel/speed-insights/react";
 import { apiFetch, analyzeStream, marketScanStream } from "./utils/api";
 import { STRING_COLS, SCAN_STRING_COLS } from "./utils/format";
 import Header from "./components/Header";
+import UpdateBanner from "./components/UpdateBanner";
 import Controls from "./components/Controls";
 import StatusBar from "./components/StatusBar";
 import ProgressBar from "./components/ProgressBar";
@@ -136,7 +137,6 @@ export default function App() {
         itemCategory,
         statsWithinDays,
     }) {
-        
         handleClear();
         setLoading(true);
         setHasRun(true);
@@ -230,6 +230,7 @@ export default function App() {
 
     return (
         <>
+            <UpdateBanner />
             <Header />
             <div className="max-w-[1380px] mx-auto px-5 py-5 pb-10">
                 <Controls
