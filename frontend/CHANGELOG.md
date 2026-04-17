@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/jukor112/ffxiv_analyst/compare/v1.4.0...v1.5.0) (2026-04-17)
+
+
+### Features
+
+* add HelpModal component and integrate help button in Controls ([2a5b127](https://github.com/jukor112/ffxiv_analyst/commit/2a5b127879a5a9cc6232bbe85dbaa2e2224f262c))
+
 # [1.4.0](https://github.com/jukor112/ffxiv_analyst/compare/v1.3.1...v1.4.0) (2026-04-17)
 
 
