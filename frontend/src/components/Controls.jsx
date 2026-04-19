@@ -27,7 +27,7 @@ const SORT_OPTIONS = [
     { value: "weekly_gil_earned", label: "Weekly Revenue" },
     { value: "weekly_qty_sold", label: "Weekly Qty Sold" },
     { value: "level", label: "Recipe Level" },
-    { value: "revenue", label: "Revenue" },
+    { value: "sell_price", label: "Avg Sold Price" },
 ];
 
 const SCAN_SORT_OPTIONS = [
@@ -384,18 +384,9 @@ export default function Controls({ worlds, cacheInfo, onAnalyze, onScan, loading
 
     const worldOptions = [];
     for (const [region, dcs] of Object.entries(worlds)) {
-        worldOptions.push(
-            <optgroup key={`dc-hdr-${region}`} label={`\u2500\u2500 ${region} Datacenters \u2500\u2500`}>
-                {Object.keys(dcs).map((dc) => (
-                    <option key={`dc-${dc}`} value={dc}>
-                        {dc} (whole DC)
-                    </option>
-                ))}
-            </optgroup>,
-        );
         for (const [dc, dcWorlds] of Object.entries(dcs)) {
             worldOptions.push(
-                <optgroup key={`w-${dc}`} label={`  ${dc}`}>
+                <optgroup key={`w-${dc}`} label={`${region} — ${dc}`}>
                     {dcWorlds.map((w) => (
                         <option key={w} value={w}>
                             {w}
