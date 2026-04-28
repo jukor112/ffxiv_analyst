@@ -1,3 +1,10 @@
+# [1.7.0](https://github.com/jukor112/ffxiv_analyst/compare/v1.6.1...v1.7.0) (2026-04-28)
+
+
+### Features
+
+* enhance IngredientPanel with ProfitAnalysis component and improve UI ([d38e864](https://github.com/jukor112/ffxiv_analyst/commit/d38e8646c7ac5e53fa9fd4b73d3ba861b3dea7a0))
+
 ## [1.6.1](https://github.com/jukor112/ffxiv_analyst/compare/v1.6.0...v1.6.1) (2026-04-19)
 
 
