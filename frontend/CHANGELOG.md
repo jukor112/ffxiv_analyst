@@ -1,3 +1,10 @@
+## [1.6.1](https://github.com/jukor112/ffxiv_analyst/compare/v1.6.0...v1.6.1) (2026-04-19)
+
+
+### Bug Fixes
+
+* update sorting options and improve world datacenter labels ([f4bd81a](https://github.com/jukor112/ffxiv_analyst/commit/f4bd81a0c1be21f7f0fb506a1ac7b8969b741534))
+
 # [1.6.0](https://github.com/jukor112/ffxiv_analyst/compare/v1.5.0...v1.6.0) (2026-04-17)
 
 
