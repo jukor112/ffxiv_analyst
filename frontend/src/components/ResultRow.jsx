@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
-import { createPortal } from "react-dom";
+import useTooltipPosition from "../hooks/useTooltipPosition";
+import TooltipPortal from "./TooltipPortal";
 import { gil, timeAgo } from "../utils/format";
 import IngredientPanel from "./IngredientPanel";
 
@@ -20,23 +21,13 @@ const JOB_ICON_CLASS = "block w-3.5 h-3.5 shrink-0 object-contain";
 
 export default function ResultRow({ r, idx, expanded, onToggle, asCard = false }) {
     const [excluded, setExcluded] = useState(new Set());
-    const [tipPos, setTipPos] = useState(null); // { x, y, below }
+    const [plannedQuantity, setPlannedQuantity] = useState(1);
     const jobBadgeRef = useRef(null);
 
-    function handleJobMouseEnter() {
-        if (jobBadgeRef.current) {
-            const rect = jobBadgeRef.current.getBoundingClientRect();
-            setTipPos({
-                x: rect.left + rect.width / 2,
-                y: rect.top < 160 ? rect.bottom : rect.top,
-                below: rect.top < 160,
-            });
-        }
-    }
-
-    function handleJobMouseLeave() {
-        setTipPos(null);
-    }
+    const { tooltipPos, show: tipPos, handleShow: handleJobMouseEnter, handleHide: handleJobMouseLeave, above } = useTooltipPosition({
+        placement: "centered",
+        offset: 6,
+    });
 
     function toggleExclude(i) {
         setExcluded((prev) => {
@@ -61,6 +52,9 @@ export default function ResultRow({ r, idx, expanded, onToggle, asCard = false }
     const displayCost = excluded.size > 0 ? adjCost : r.cost;
     const displayProfit = excluded.size > 0 ? adjProfit : r.profit;
     const displayMargin = excluded.size > 0 ? adjMargin : r.margin;
+
+    // For the profit calculator: use adjusted values when ingredients are excluded
+    const perCraftProfitForCalc = excluded.size > 0 ? adjProfit : r.profit;
 
     const profitPos = displayProfit >= 0;
     const profitColor = profitPos ? "#4cba82" : "#e05050";
@@ -276,6 +270,10 @@ export default function ResultRow({ r, idx, expanded, onToggle, asCard = false }
                             onToggle={toggleExclude}
                             onReset={resetExcluded}
                             compact
+                            plannedQuantity={plannedQuantity}
+                            onQuantityChange={setPlannedQuantity}
+                            perCraftProfit={perCraftProfitForCalc}
+                            sellPrice={r.sell_price}
                         />
                     </div>
                 )}
@@ -406,38 +404,31 @@ export default function ResultRow({ r, idx, expanded, onToggle, asCard = false }
                             >
                                 <span>{jobs.length}×</span>
                             </span>
-                            {/* Tooltip rendered in a portal to escape table stacking context */}
-                            {tipPos &&
-                                createPortal(
-                                    <div
-                                        className="pointer-events-none fixed z-[9999] -translate-x-1/2 bg-[#0d0d22] border border-border rounded shadow-lg px-2 py-1.5 flex flex-col gap-1 whitespace-nowrap"
-                                        style={{
-                                            left: tipPos.x,
-                                            ...(tipPos.below
-                                                ? { top: tipPos.y + 6 }
-                                                : { bottom: window.innerHeight - tipPos.y + 6 }),
-                                        }}
-                                    >
-                                        <span className="text-[9px] uppercase tracking-widest text-muted-foreground mb-0.5">
-                                            Craftable by
+                            <TooltipPortal
+                                show={tipPos}
+                                position={tooltipPos}
+                                placement="centered"
+                                above={above}
+                                className="pointer-events-none bg-[#0d0d22] border border-border rounded shadow-lg px-2 py-1.5 flex flex-col gap-1 whitespace-nowrap"
+                            >
+                                <span className="text-[9px] uppercase tracking-widest text-muted-foreground mb-0.5">
+                                    Craftable by
+                                </span>
+                                {jobs.map((job, i) => {
+                                    const jStyle = JOB_STYLES[job] ?? {
+                                        background: "rgba(30,30,30,0.9)",
+                                        color: "#888",
+                                    };
+                                    return (
+                                        <span key={job} className={JOB_BADGE_CLASS} style={jStyle}>
+                                            {jobIcons[i] && (
+                                                <img src={jobIcons[i]} alt={job} className={JOB_ICON_CLASS} />
+                                            )}
+                                            {job}
                                         </span>
-                                        {jobs.map((job, i) => {
-                                            const jStyle = JOB_STYLES[job] ?? {
-                                                background: "rgba(30,30,30,0.9)",
-                                                color: "#888",
-                                            };
-                                            return (
-                                                <span key={job} className={JOB_BADGE_CLASS} style={jStyle}>
-                                                    {jobIcons[i] && (
-                                                        <img src={jobIcons[i]} alt={job} className={JOB_ICON_CLASS} />
-                                                    )}
-                                                    {job}
-                                                </span>
-                                            );
-                                        })}
-                                    </div>,
-                                    document.body,
-                                )}
+                                    );
+                                })}
+                            </TooltipPortal>
                         </span>
                     )}
                 </td>
@@ -532,6 +523,10 @@ export default function ResultRow({ r, idx, expanded, onToggle, asCard = false }
                             excluded={excluded}
                             onToggle={toggleExclude}
                             onReset={resetExcluded}
+                            plannedQuantity={plannedQuantity}
+                            onQuantityChange={setPlannedQuantity}
+                            perCraftProfit={perCraftProfitForCalc}
+                            sellPrice={r.sell_price}
                         />
                     </td>
                 </tr>
