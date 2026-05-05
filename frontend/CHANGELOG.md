@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/jukor112/ffxiv_analyst/compare/v1.7.0...v1.8.0) (2026-05-05)
+
+
+### Features
+
+* add toggle to show negative profit items in results ([febc30e](https://github.com/jukor112/ffxiv_analyst/commit/febc30e8fac34ea9c2de5011ae81d453a390f362))
+
 # [1.7.0](https://github.com/jukor112/ffxiv_analyst/compare/v1.6.1...v1.7.0) (2026-04-28)
 
 
