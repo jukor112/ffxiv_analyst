@@ -751,7 +751,9 @@ async def analyze(
         if velocity < min_velocity:
             stats_velocity_filtered += 1
             continue
-        if profit < min_profit:
+        if profit < 0:
+            pass
+        elif profit < min_profit:
             stats_profit_filtered += 1
             continue
 

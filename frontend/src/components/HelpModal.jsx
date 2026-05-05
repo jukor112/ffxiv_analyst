@@ -43,6 +43,10 @@ const TIPS = [
         body: "Filters out items that rarely sell. Set it high (5+) for fast commodities; set it low (0.1) to surface rare high-value items.",
     },
     {
+        heading: "Show Neg. Profit toggle",
+        body: "Found next to the Clear button in the results header. When on, items losing gil (negative profit) appear in the table alongside profitable ones. Useful for spotting crowded markets where competitors are undercutting into a loss — they may exit soon. Off by default.",
+    },
+    {
         heading: "Market Scan mode",
         body: "Shows items you can't craft but can flip or farm — shop items you can buy and resell, or drop items worth hunting. Great for finding gil without levelling crafters.",
     },

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { apiFetch, analyzeStream, marketScanStream } from "./utils/api";
@@ -25,6 +25,7 @@ export default function App() {
     const [sortAsc, setSortAsc] = useState(false);
     const [expandedIds, setExpandedIds] = useState(new Set());
     const [hasRun, setHasRun] = useState(false);
+    const [showNegativeProfit, setShowNegativeProfit] = useState(false);
 
     useEffect(() => {
         apiFetch("/api/worlds").then(setWorlds).catch(console.error);
@@ -220,11 +221,19 @@ export default function App() {
         });
     }
 
+    const displayResults = useMemo(() => {
+        if (mode === "crafting" && !showNegativeProfit) {
+            return results.filter((r) => r.profit >= 0);
+        }
+        return results;
+    }, [results, showNegativeProfit, mode]);
+
     function handleClear() {
         setResults([]);
         setMeta(null);
         setExpandedIds(new Set());
         setHasRun(false);
+        setShowNegativeProfit(false);
         setStatus(null);
     }
 
@@ -267,7 +276,8 @@ export default function App() {
                                     </>
                                 ) : (
                                     <>
-                                        Showing <span className="text-primary font-semibold">{meta.shown}</span> of{" "}
+                                        Showing{" "}
+                                        <span className="text-primary font-semibold">{displayResults.length}</span> of{" "}
                                         <span className="text-primary font-semibold">{meta.total}</span> profitable
                                         recipes on <span className="text-primary font-semibold">{meta.world}</span> ·
                                         Job: <span className="text-primary font-semibold">{meta.job}</span>
@@ -278,19 +288,39 @@ export default function App() {
                             )}
                         </p>
                         {results.length > 0 && (
-                            <button
-                                className="border border-border text-muted-foreground text-[11px] font-bold uppercase tracking-wide px-3 py-1.5 rounded-md hover:border-primary hover:text-primary transition-colors duration-150 cursor-pointer"
-                                onClick={handleClear}
-                            >
-                                Clear
-                            </button>
+                            <div className="flex items-center gap-3">
+                                <label className="flex items-center gap-2 cursor-pointer text-[11px] uppercase tracking-wide text-muted-foreground select-none">
+                                    <button
+                                        type="button"
+                                        role="switch"
+                                        aria-checked={showNegativeProfit}
+                                        onClick={() => setShowNegativeProfit(!showNegativeProfit)}
+                                        className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ${
+                                            showNegativeProfit ? "bg-primary" : "bg-border"
+                                        }`}
+                                    >
+                                        <span
+                                            className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform duration-200 ${
+                                                showNegativeProfit ? "translate-x-4" : "translate-x-0"
+                                            }`}
+                                        />
+                                    </button>
+                                    Show Negative Profit Items
+                                </label>
+                                <button
+                                    className="border border-border text-muted-foreground text-[11px] font-bold uppercase tracking-wide px-3 py-1.5 rounded-md hover:border-primary hover:text-primary transition-colors duration-150 cursor-pointer"
+                                    onClick={handleClear}
+                                >
+                                    Clear
+                                </button>
+                            </div>
                         )}
                     </div>
 
                     {/* Table or empty state */}
-                    {results.length > 0 ? (
+                    {displayResults.length > 0 ? (
                         <ResultsTable
-                            results={results}
+                            results={displayResults}
                             sortField={sortField}
                             sortAsc={sortAsc}
                             expandedIds={expandedIds}
