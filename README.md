@@ -238,7 +238,7 @@ Runs a full analysis and returns the complete result as a single JSON response. 
 
 ---
 
-### `GET /api/analyze/stream` ⭐
+### `GET /api/analyze/stream`
 
 Runs a full analysis and streams progress via **Server-Sent Events (SSE)**. This is the endpoint used by the UI.
 
@@ -274,7 +274,7 @@ Runs a market scan for non-craftable, non-gatherable tradeable items (drops, spe
 
 ---
 
-### `GET /api/analyze/market-scan/stream` ⭐
+### `GET /api/analyze/market-scan/stream`
 
 Runs a market scan and streams progress via **SSE**. This is the endpoint used by the market scan UI tab.
 
