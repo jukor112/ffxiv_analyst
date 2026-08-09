@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import APIRouter, FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -82,30 +82,28 @@ DATACENTERS: dict[str, dict[str, list[str]]] = {
     },
 }
 
-# ---------------------------------------------------------------------------
-# API routes
-# ---------------------------------------------------------------------------
+router = APIRouter()
 
 
-@app.get("/api/jobs")
+@router.get("/jobs")
 async def get_jobs() -> list[str]:
     """List available crafting job abbreviations."""
     return list(JOBS.keys())
 
 
-@app.get("/api/worlds")
+@router.get("/worlds")
 async def get_worlds() -> dict:
     """Return datacenter / world hierarchy."""
     return DATACENTERS
 
 
-@app.get("/api/cache/status")
+@router.get("/cache/status")
 async def cache_status() -> dict:
     """Return the current recipe cache status."""
     return get_cache_info()
 
 
-@app.get("/api/analyze")
+@router.get("/analyze")
 async def analyze_endpoint(
     world: str = Query(..., description="World or Datacenter name, e.g. Gilgamesh or Crystal"),
     job: str = Query("ALL", description="Job abbreviation (CRP, BSM, ARM, GSM, LTW, WVR, ALC, CUL) or ALL"),
@@ -157,7 +155,7 @@ _ANALYZE_PARAMS = dict(
 )
 
 
-@app.get("/api/analyze/stream")
+@router.get("/analyze/stream")
 async def analyze_stream_endpoint(
     world: str = Query(...),
     job: str = Query("ALL"),
@@ -222,7 +220,7 @@ async def analyze_stream_endpoint(
 # ---------------------------------------------------------------------------
 
 
-@app.get("/api/analyze/market-scan")
+@router.get("/analyze/market-scan")
 async def market_scan_endpoint(
     world: str = Query(..., description="World or Datacenter name"),
     min_price: int = Query(0, ge=0, description="Minimum list price in gil"),
@@ -250,7 +248,7 @@ async def market_scan_endpoint(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@app.get("/api/analyze/market-scan/stream")
+@router.get("/analyze/market-scan/stream")
 async def market_scan_stream_endpoint(
     world: str = Query(...),
     min_price: int = Query(0, ge=0),
@@ -302,6 +300,14 @@ async def market_scan_stream_endpoint(
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+# ---------------------------------------------------------------------------
+# Mount router for both Vercel serverless (stripped prefix) and local dev (/api prefix)
+# ---------------------------------------------------------------------------
+
+app.include_router(router)
+app.include_router(router, prefix="/api")
 
 
 # ---------------------------------------------------------------------------
