@@ -1,3 +1,10 @@
+## [1.8.1](https://github.com/jukor112/ffxiv_analyst/compare/v1.8.0...v1.8.1) (2026-08-10)
+
+
+### Bug Fixes
+
+* **vercel:** remove /api rewrite that broke API routing under new backend-framework rewrite behavior ([603bc42](https://github.com/jukor112/ffxiv_analyst/commit/603bc4295a50e61bdabbec163a696e35212f0a21))
+
 # [1.8.0](https://github.com/jukor112/ffxiv_analyst/compare/v1.7.0...v1.8.0) (2026-05-05)
 
 
